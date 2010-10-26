@@ -45,7 +45,6 @@ fileDB f = CommentStorage
     }
     where
         storeComment' comment = do
-            -- a comment with a literal '|' in it will be lost...
             let str = concat [ thread comment,                  "|"
                              , formatTime' $ timeStamp comment, "|"
                              , ipAddress comment,               "|"
@@ -55,12 +54,19 @@ fileDB f = CommentStorage
             liftIO $ appendFile f str
 
         formatTime'  = formatTime defaultTimeLocale "%s"
-        htmlToString = L.unpack . renderHtml
+        htmlToString = fixPipe . L.unpack . renderHtml
+
+        -- since we use | as a delimiter we need to htmlize it before
+        -- storing the comment
+        fixPipe []         = []
+        fixPipe ('|':rest) = "&#124;" ++ fixPipe rest
+        fixPipe (x:rest)   = x : fixPipe rest
 
         loadComments' id = do
             contents <- liftIO $ readFile f
             return $ mapMaybe (readComment id) (lines contents)
 
+        readComment :: String -> String -> Maybe Comment
         readComment id' s = 
             case wordsBy (=='|') s of
                 [t, ts, ip, user, html] -> 
