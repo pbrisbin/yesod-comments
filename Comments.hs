@@ -14,9 +14,10 @@
 -- A generic Comments interface for a Yesod application.
 --
 -------------------------------------------------------------------------------
-module Comments (commentsForm) where
+module Comments (runCommentsForm) where
 
 import Comments.Core
+import Comments.Fields
 import Comments.Templates
 import Comments.Storage
 
@@ -27,13 +28,7 @@ import Network.Wai                (remoteHost)
 import Text.Hamlet                (toHtml)
 import Text.HTML.SanitizeXSS      (sanitizeXSS)
 
-import Yesod.Form
-import Yesod.Form.Core
-import Control.Monad   (mplus)
-import Data.Maybe      (fromMaybe)
-
 import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy.Char8 as L
 
 -- | Cleans form input and create a comment type to be stored
 commentFromForm :: String -> CommentForm -> GHandler s m Comment
@@ -75,66 +70,18 @@ commentForm cf = fieldsToTable $ CommentForm
     <*> commentField "comment:" (fmap formComment cf)
     <*> boolField    "html?"    (fmap formIsHtml  cf)
 
--- | todo: A copy of stringField but with custom validation
-userField :: String -> FormletField sub y String
-userField label initial = GForm $ do
-    userId   <- newFormIdent
-    userName <- newFormIdent
-    env      <- askParams
-
-    let res = case env of
-                [] -> FormMissing
-                _  ->
-                    case lookup userName env of
-                        Just userString -> 
-                            if isValid userString
-                                then FormSuccess userString
-                                else FormFailure ["[a-zA-Z-_. ]"]
-                        _               -> FormFailure ["Value is required"]
-
-    let userValue = fromMaybe "" $ lookup userName env `mplus` initial
-    let fi = FieldInfo { fiLabel   = string label
-                       , fiTooltip = string ""
-                       , fiIdent = userId
-                       , fiInput = [$hamlet|
-%input#userId!name=$userName$!type=text!value=$userValue$!size="22"
-|]
-                       , fiErrors =
-                           case res of
-                               FormFailure [x] -> Just $ string x
-                               _               -> Nothing
-                       }
-
-    return (res, [fi], UrlEncoded)
-    where
-        isValid s  = (s /= []) && all (`elem` validChars) s
-        validChars = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ "-_. " 
-
--- | A copy of textareaField but with a larger entry box
-commentField :: FormFieldSettings -> FormletField sub y Textarea
-commentField = requiredFieldHelper textareaFieldProfile'
-
-textareaFieldProfile' :: FieldProfile sub y Textarea
-textareaFieldProfile' = FieldProfile
-    { fpParse  = Right . Textarea
-    , fpRender = unTextarea
-    , fpWidget = \theId name val _isReq -> addBody [$hamlet|
-%textarea#$theId$!name=$name$!cols="100%"!rows="10" $val$
-|]
-    }
-
 -- | Provides a single call to retrieve the html for the comments
 --   section of a page
-commentsForm :: (Yesod m)
-             => ([Comment]
-             -> GWidget s m ()
-             -> Enctype
-             -> GWidget s m ()) -- ^ the overall template
-             -> CommentStorage  -- ^ how you store your comments
-             -> String          -- ^ the id for the thread you're requesting
-             -> Route m         -- ^ a route to redirect to after a POST
-             -> GHandler s m (Hamlet (Route m))
-commentsForm template db thread r = do
+runCommentsForm :: (Yesod m)
+                => ([Comment]
+                -> GWidget s m ()
+                -> Enctype
+                -> GWidget s m ()) -- ^ the overall template
+                -> CommentStorage  -- ^ how you store your comments
+                -> String          -- ^ the id for the thread you're requesting
+                -> Route m         -- ^ a route to redirect to after a POST
+                -> GHandler s m (Hamlet (Route m))
+runCommentsForm template db thread r = do
     -- POST if needed
     (res, form, enctype) <- runFormPost $ commentForm Nothing
     case res of
