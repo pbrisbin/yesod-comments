@@ -8,7 +8,8 @@
 -- Stability   :  unstable
 -- Portability :  unportable
 --
--- Some pre-built backend definitions.
+-- Some pre-built backend definitions. So far just test and file, soon
+-- persistent.
 --
 -------------------------------------------------------------------------------
 module Comments.Storage 
@@ -18,6 +19,7 @@ module Comments.Storage
 
 import Yesod
 import Comments.Core
+
 import Data.List.Split  (wordsBy)
 import Data.Time.Clock  (UTCTime)
 import Data.Time.Format (parseTime, formatTime)
@@ -28,24 +30,31 @@ import System.Locale    (defaultTimeLocale)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as L
 
+-- strict reads are required since reading/writing occur so close to
+-- each other and ghc leaves the handles open
+import qualified System.IO.Strict
+
 -- | For use during testing, always loads no comments and prints the
 --   comment to stderr as "store"
 testDB :: CommentStorage
 testDB = CommentStorage
-    { storeComment = liftIO . hPutStrLn stderr . show
-    , loadComments = \_ -> return []
+    { storeComment  = liftIO . hPutStrLn stderr . show
+    , loadComments  = \_   -> return []
+    , deleteComment = \_ _ -> return ()
     }
 
 -- | A simple flat file storage method, this is way unreliable, probably
 --   wicked slow, but dead simple to setup/use
 fileDB :: FilePath -> CommentStorage
 fileDB f = CommentStorage
-    { storeComment = storeComment'
-    , loadComments = loadComments'
+    { storeComment  = storeComment'
+    , loadComments  = loadComments'
+    , deleteComment = deleteComment'
     }
     where
         storeComment' comment = do
-            let str = concat [ thread comment,                  "|"
+            let str = concat [ threadId comment,                "|"
+                             , show $ commentId comment,        "|"
                              , formatTime' $ timeStamp comment, "|"
                              , ipAddress comment,               "|"
                              , userName comment,                "|"
@@ -63,23 +72,24 @@ fileDB f = CommentStorage
         fixPipe (x:rest)   = x : fixPipe rest
 
         loadComments' id = do
-            contents <- liftIO $ readFile f
+            contents <- liftIO $ System.IO.Strict.readFile f
             return $ mapMaybe (readComment id) (lines contents)
 
         readComment :: String -> String -> Maybe Comment
         readComment id' s = 
             case wordsBy (=='|') s of
-                [t, ts, ip, user, html] -> 
+                [t, c, ts, ip, u, h] -> 
                     if t == id'
                         then
                             case readTime ts of
                                 Just utc -> Just
                                     Comment
-                                        { thread    = t
+                                        { threadId  = t
+                                        , commentId = read c :: Int
                                         , timeStamp = utc
                                         , ipAddress = ip
-                                        , userName  = user
-                                        , content   = preEscapedString html
+                                        , userName  = u
+                                        , content   = preEscapedString h
                                         }
                                 _ -> Nothing
                         else Nothing
@@ -87,3 +97,5 @@ fileDB f = CommentStorage
 
         readTime :: String -> Maybe UTCTime
         readTime = parseTime defaultTimeLocale "%s"
+
+        deleteComment' = undefined
