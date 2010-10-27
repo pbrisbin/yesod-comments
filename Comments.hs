@@ -1,6 +1,5 @@
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes        #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Comments
@@ -14,7 +13,6 @@
 -- A generic Comments interface for a Yesod application.
 --
 -------------------------------------------------------------------------------
---module Comments (runCommentsForm) where
 module Comments where
 
 import Comments.Core
@@ -33,14 +31,14 @@ import Text.HTML.SanitizeXSS      (sanitizeXSS)
 import qualified Data.ByteString.Char8 as B
 
 -- | Cleans form input and create a comment type to be stored
-commentFromForm :: String -> CommentForm -> GHandler s m Comment
-commentFromForm thread cf = do
+commentFromForm :: ThreadId -> CommentId -> CommentForm -> GHandler s m Comment
+commentFromForm tId cId cf = do
     timeNow <- liftIO getCurrentTime
     ip      <- return . B.unpack . remoteHost =<< waiRequest
 
     if formIsHtml cf
-        then return $ Comment thread timeNow ip (formUser cf) (htmlToHtml $ formComment cf)
-        else return $ Comment thread timeNow ip (formUser cf) (textToHtml $ formComment cf)
+        then return $ Comment tId cId timeNow ip (formUser cf) (htmlToHtml $ formComment cf)
+        else return $ Comment tId cId timeNow ip (formUser cf) (textToHtml $ formComment cf)
     where
         -- the user entered html source directly
         htmlToHtml :: Textarea -> Html
@@ -71,18 +69,7 @@ liftT f = Textarea . f . unTextarea
 --    <$> userField    "name:"    (fmap formUser    cf)
 --    <*> commentField "comment:" (fmap formComment cf)
 --    <*> boolField    "html?"    (fmap formIsHtml  cf)
-
-commentForm = do
-    (user   , userField   ) <- stringField   "name:"    Nothing
-    (comment, commentField) <- textareaField "comment:" Nothing
-    (isHtml , isHtmlField ) <- boolField     "html?"    Nothing
-    return (CommentForm <$> user <*> comment <*> isHtml, [$hamlet|
-    %p
-        ^userField^
-        %br ^commentField^
-        %br ^isHtmlField^
-|])
-
+--
 -- | Provides a single call to retrieve the html for the comments
 --   section of a page
 --runCommentsForm :: (Yesod m)
@@ -95,20 +82,22 @@ commentForm = do
 --                -> Route m         -- ^ a route to redirect to after a POST
 --                -> GHandler s m (Hamlet (Route m))
 --runCommentsForm template db thread r = do
+--    -- load existing comments
+--    comments <- loadComments db thread
+--    let cId = getNextId comments
+--
+--    -- run the form
 --    ((res, form), enctype) <- runFormMonadPost commentForm
 --    case res of
 --        FormMissing    -> return ()
 --        FormFailure _  -> return ()
 --        FormSuccess cf -> do
---            comment <- commentFromForm thread cf
+--            comment <- commentFromForm thread cId cf
 --            storeComment db comment
 --            -- redirect to prevent accidental reposts and to clear the
 --            -- form data
 --            setMessage $ [$hamlet| %em comment added |]
 --            redirect RedirectTemporary r
---
---    -- load existing comments
---    comments <- loadComments db thread
 --
 --    -- return it as a widget
 --    --return $ template comments form enctype
@@ -116,3 +105,9 @@ commentForm = do
 --    -- return it as hamlet; todo: this is a _hack_
 --    pc <- widgetToPageContent $ template comments form enctype
 --    return $ pageBody pc
+
+-- | Get the next available comment Id, assumes the parameter list of
+--   commments is already filtered to a specific thread
+getNextId :: [Comment] -> CommentId
+getNextId []       = 0
+getNextId comments = (maximum $ map commentId comments) + 1

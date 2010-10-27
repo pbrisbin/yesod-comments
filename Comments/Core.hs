@@ -9,11 +9,13 @@
 -- Stability   :  unstable
 -- Portability :  unportable
 --
--- Core data types.
+-- Core comment data types.
 --
 -------------------------------------------------------------------------------
 module Comments.Core 
     ( Comment(..)
+    , ThreadId
+    , CommentId
     , CommentForm(..)
     , CommentStorage(..)
     ) where
@@ -21,9 +23,17 @@ module Comments.Core
 import Yesod
 import Data.Time.Clock (UTCTime)
 
--- | The actual comment data type
+-- | A unique thread identifier, usually a post slug.
+type ThreadId = String
+
+-- | A unique identifier for a comment within a thread, usually an
+--   incrementing number calculated as comments are added.
+type CommentId = Int
+
+-- | The actual comment data type.
 data Comment = Comment
-    { thread    :: String
+    { threadId  :: ThreadId
+    , commentId :: CommentId
     , timeStamp :: UTCTime
     , ipAddress :: String
     , userName  :: String
@@ -38,9 +48,11 @@ data CommentForm = CommentForm
     , formIsHtml  :: Bool
     }
 
--- | A data type to represent your backend. Provides an abstract
---   interface for use by the code here.
+-- | A data type to represent your backend. Provides total flexibility
+--   by abstracting the actual storage away behind the three required
+--   functions. See 'Comments.Storage' for example backends.
 data CommentStorage = CommentStorage
-    { storeComment :: (Yesod m) => Comment -> GHandler s m ()
-    , loadComments :: (Yesod m) => String  -> GHandler s m [Comment]
+    { storeComment  :: (Yesod m) => Comment -> GHandler s m ()
+    , loadComments  :: (Yesod m) => ThreadId -> GHandler s m [Comment]
+    , deleteComment :: (Yesod m) => ThreadId -> CommentId -> GHandler s m ()
     }
