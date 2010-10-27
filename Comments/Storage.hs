@@ -87,6 +87,3 @@ fileDB f = CommentStorage
 
         readTime :: String -> Maybe UTCTime
         readTime = parseTime defaultTimeLocale "%s"
-
---persistentDB :: CommentStorage
---persistentDB = undefined

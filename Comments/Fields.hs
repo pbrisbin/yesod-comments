@@ -24,8 +24,9 @@ import Yesod.Form.Core
 import Control.Monad   (mplus)
 import Data.Maybe      (fromMaybe)
 
--- | A custom stringField but with special validation
-userField :: String -> FormletField sub y String
+-- | A custom stringField but with special validation; todo: not 0.6
+--   compatible
+userField :: String -> Maybe String -> GForm s m [FieldInfo s m] String
 userField label initial = GForm $ do
     userId   <- newFormIdent
     userName <- newFormIdent
@@ -44,14 +45,15 @@ userField label initial = GForm $ do
     let userValue = fromMaybe "" $ lookup userName env `mplus` initial
     let fi = FieldInfo { fiLabel   = string label
                        , fiTooltip = string ""
-                       , fiIdent = userId
-                       , fiInput = [$hamlet|
-%input#userId!name=$userName$!type=text!value=$userValue$!size="22"
+                       , fiIdent   = userId
+                       , fiInput   = [$hamlet|
+%input#userId!name=$userName$!type=text!value=$userValue$!size="20"
 |]
                        , fiErrors =
                            case res of
                                FormFailure [x] -> Just $ string x
                                _               -> Nothing
+                       , fiRequired = True
                        }
 
     return (res, [fi], UrlEncoded)
@@ -67,7 +69,7 @@ textareaFieldProfile' :: FieldProfile sub y Textarea
 textareaFieldProfile' = FieldProfile
     { fpParse  = Right . Textarea
     , fpRender = unTextarea
-    , fpWidget = \theId name val _isReq -> addBody [$hamlet|
-%textarea#$theId$!name=$name$!cols="80%"!rows="10" $val$
+    , fpWidget = \theId name val _isReq -> addHamlet [$hamlet|
+%textarea#$theId$!name=$name$!cols="40"!rows="4" $val$
 |]
     }

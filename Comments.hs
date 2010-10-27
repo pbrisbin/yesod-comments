@@ -14,7 +14,8 @@
 -- A generic Comments interface for a Yesod application.
 --
 -------------------------------------------------------------------------------
-module Comments (runCommentsForm) where
+--module Comments (runCommentsForm) where
+module Comments where
 
 import Comments.Core
 import Comments.Fields
@@ -22,6 +23,7 @@ import Comments.Templates
 import Comments.Storage
 
 import Yesod
+import Yesod.Form.Core
 import Control.Applicative        ((<$>), (<*>))
 import Data.Time.Clock            (getCurrentTime)
 import Network.Wai                (remoteHost)
@@ -64,43 +66,53 @@ liftT :: (String -> String) -> Textarea -> Textarea
 liftT f = Textarea . f . unTextarea
 
 -- | The input form itself
-commentForm :: Maybe CommentForm -> Form s m CommentForm
-commentForm cf = fieldsToTable $ CommentForm
-    <$> userField    "name:"    (fmap formUser    cf)
-    <*> commentField "comment:" (fmap formComment cf)
-    <*> boolField    "html?"    (fmap formIsHtml  cf)
+--commentForm :: Maybe CommentForm -> Form s m CommentForm
+--commentForm cf = fieldsToTable $ CommentForm
+--    <$> userField    "name:"    (fmap formUser    cf)
+--    <*> commentField "comment:" (fmap formComment cf)
+--    <*> boolField    "html?"    (fmap formIsHtml  cf)
+
+commentForm = do
+    (user   , userField   ) <- stringField   "name:"    Nothing
+    (comment, commentField) <- textareaField "comment:" Nothing
+    (isHtml , isHtmlField ) <- boolField     "html?"    Nothing
+    return (CommentForm <$> user <*> comment <*> isHtml, [$hamlet|
+    %p
+        ^userField^
+        %br ^commentField^
+        %br ^isHtmlField^
+|])
 
 -- | Provides a single call to retrieve the html for the comments
 --   section of a page
-runCommentsForm :: (Yesod m)
-                => ([Comment]
-                -> GWidget s m ()
-                -> Enctype
-                -> GWidget s m ()) -- ^ the overall template
-                -> CommentStorage  -- ^ how you store your comments
-                -> String          -- ^ the id for the thread you're requesting
-                -> Route m         -- ^ a route to redirect to after a POST
-                -> GHandler s m (Hamlet (Route m))
-runCommentsForm template db thread r = do
-    -- POST if needed
-    (res, form, enctype) <- runFormPost $ commentForm Nothing
-    case res of
-        FormMissing    -> return ()
-        FormFailure _  -> return ()
-        FormSuccess cf -> do
-            comment <- commentFromForm thread cf
-            storeComment db comment
-            -- redirect to prevent accidental reposts and to clear the
-            -- form data
-            setMessage $ [$hamlet| %em comment added |]
-            redirect RedirectTemporary r
-
-    -- load existing comments
-    comments <- loadComments db thread
-
-    -- return it as a widget
-    --return $ template comments form enctype
-    
-    -- return it as hamlet; todo: this is a _hack_
-    pc <- widgetToPageContent $ template comments form enctype
-    return $ pageBody pc
+--runCommentsForm :: (Yesod m)
+--                => ([Comment]
+--                -> GWidget s m ()
+--                -> Enctype
+--                -> GWidget s m ()) -- ^ the overall template
+--                -> CommentStorage  -- ^ how you store your comments
+--                -> String          -- ^ the id for the thread you're requesting
+--                -> Route m         -- ^ a route to redirect to after a POST
+--                -> GHandler s m (Hamlet (Route m))
+--runCommentsForm template db thread r = do
+--    ((res, form), enctype) <- runFormMonadPost commentForm
+--    case res of
+--        FormMissing    -> return ()
+--        FormFailure _  -> return ()
+--        FormSuccess cf -> do
+--            comment <- commentFromForm thread cf
+--            storeComment db comment
+--            -- redirect to prevent accidental reposts and to clear the
+--            -- form data
+--            setMessage $ [$hamlet| %em comment added |]
+--            redirect RedirectTemporary r
+--
+--    -- load existing comments
+--    comments <- loadComments db thread
+--
+--    -- return it as a widget
+--    --return $ template comments form enctype
+--    
+--    -- return it as hamlet; todo: this is a _hack_
+--    pc <- widgetToPageContent $ template comments form enctype
+--    return $ pageBody pc
