@@ -13,17 +13,21 @@
 -- Drop in templates, for now only one.
 --
 -------------------------------------------------------------------------------
-module Comments.Templates (defaultTemplate) where
+module Comments.Templates 
+    ( defaultTemplate
+    , entryAfterTemplate
+    ) where
 
 import Yesod
 import Comments.Core
 
-import Text.Hamlet      (HamletValue, ToHtml)
+import Text.Hamlet      (HamletValue)
 import Data.Time.Format (formatTime)
 import System.Locale    (defaultTimeLocale)
 
--- | Template for the entire comments section
-defaultTemplate :: (HamletValue a, ToHtml b) => [Comment] -> a -> b -> a
+-- | A default template, entry box on top, comments shown below;
+--   comments should be pass presorted as they should be displayed
+defaultTemplate :: CommentsTemplate
 defaultTemplate comments form enctype = [$hamlet|
 #comments
     %h4 Add a comment:
@@ -33,7 +37,7 @@ defaultTemplate comments form enctype = [$hamlet|
             %tr
                 %td
                     &nbsp;
-                %td
+                %td!colspan="2"
                     %input!type="submit"!value="Add comment"
     %p 
         %em when using html, assume your text will be wrapped in &lt;p&gt &lt;/p&gt;
@@ -42,6 +46,28 @@ defaultTemplate comments form enctype = [$hamlet|
 
     $forall comments comment
         ^commentTemplate.comment^
+|]
+
+-- | Same as default but with the entry box at the ened
+entryAfterTemplate :: CommentsTemplate
+entryAfterTemplate comments form enctype = [$hamlet|
+#comments
+    %h4 Showing $string.show.length.comments$ comments:
+
+    $forall comments comment
+        ^commentTemplate.comment^
+
+    %h4 Add a comment:
+    %form!enctype=$enctype$!method="post"
+        %table
+            ^form^
+            %tr
+                %td
+                    &nbsp;
+                %td!colspan="2"
+                    %input!type="submit"!value="Add comment"
+    %p 
+        %em when using html, assume your text will be wrapped in &lt;p&gt &lt;/p&gt;
 |]
 
 -- | Sub template for a single comment

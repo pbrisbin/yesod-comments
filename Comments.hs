@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Comments
@@ -70,42 +71,41 @@ commentForm = do
     (comment, commentField) <- textareaField "comment:" Nothing
     (isHtml , isHtmlField ) <- boolField     "html?"    Nothing
     return (CommentForm <$> user <*> comment <*> isHtml, [$hamlet|
-    %table
-        %tr.$clazz.userField$
-            %td
-                %label!for=$fiIdent.userField$ $fiLabel.userField$
-                .tootip $fiTooltip.userField$
-            %td
-                ^fiInput.userField^
-            %td.errors
-                $maybe fiErrors.userField error
-                    $error$
-                $nothing
-                    &nbsp;
-
-        %tr.$clazz.commentField$
-            %td 
-                %label!for=$fiIdent.commentField$ $fiLabel.commentField$
-                .tooltip $fiTooltip.commentField$
-            %td!colspan="2" 
-                ^fiInput.commentField^
-
-        %tr.errors
-            %td &nbsp;
-            %td.errors!colspans="2"
-                $maybe fiErrors.commentField error
-                    $error$
-                $nothing
-                    &nbsp;
-
-        %tr.$clazz.isHtmlField$
-            %td 
-                %label!for=$fiIdent.isHtmlField$ $fiLabel.isHtmlField$
-                .tooltip $fiTooltip.isHtmlField$
-            %td 
-                ^fiInput.isHtmlField^
-            %td 
+    %tr.$clazz.userField$
+        %td
+            %label!for=$fiIdent.userField$ $fiLabel.userField$
+            .tootip $fiTooltip.userField$
+        %td
+            ^fiInput.userField^
+        %td.errors
+            $maybe fiErrors.userField error
+                $error$
+            $nothing
                 &nbsp;
+
+    %tr.$clazz.commentField$
+        %td 
+            %label!for=$fiIdent.commentField$ $fiLabel.commentField$
+            .tooltip $fiTooltip.commentField$
+        %td!colspan="2" 
+            ^fiInput.commentField^
+
+    %tr.errors
+        %td &nbsp;
+        %td.errors!colspans="2"
+            $maybe fiErrors.commentField error
+                $error$
+            $nothing
+                &nbsp;
+
+    %tr.$clazz.isHtmlField$
+        %td 
+            %label!for=$fiIdent.isHtmlField$ $fiLabel.isHtmlField$
+            .tooltip $fiTooltip.isHtmlField$
+        %td 
+            ^fiInput.isHtmlField^
+        %td 
+            &nbsp;
     |])
     where
         clazz fi = string $ if fiRequired fi then "required" else "optional"
@@ -113,13 +113,10 @@ commentForm = do
 -- | Provides a single call to retrieve the html for the comments
 --   section of a page
 runCommentsForm :: (Yesod m)
-                => ([Comment]
-                -> GWidget s m ()
-                -> Enctype
-                -> GWidget s m ()) -- ^ the overall template
-                -> CommentStorage  -- ^ how you store your comments
-                -> String          -- ^ the id for the thread you're requesting
-                -> Route m         -- ^ a route to redirect to after a POST
+                => CommentsTemplate -- ^ the overall template
+                -> CommentStorage   -- ^ how you store your comments
+                -> String           -- ^ the id for the thread you're requesting
+                -> Route m          -- ^ a route to redirect to after a POST
                 -> GHandler s m (Hamlet (Route m))
 runCommentsForm template db thread r = do
     -- load existing comments

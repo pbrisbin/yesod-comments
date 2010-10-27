@@ -18,6 +18,7 @@ module Comments.Core
     , CommentId
     , CommentForm(..)
     , CommentStorage(..)
+    , CommentsTemplate
     ) where
 
 import Yesod
@@ -29,6 +30,9 @@ type ThreadId = String
 -- | A unique identifier for a comment within a thread, usually an
 --   incrementing number calculated as comments are added.
 type CommentId = Int
+
+-- | A convenience synonym
+type CommentsTemplate = (Yesod m) => [Comment] -> GWidget s m () -> Enctype -> GWidget s m ()
 
 -- | The actual comment data type.
 data Comment = Comment
