@@ -147,4 +147,4 @@ runCommentsForm template db thread r = do
 --   commments is already filtered to a specific thread
 getNextId :: [Comment] -> CommentId
 getNextId []       = 0
-getNextId comments = (maximum $ map commentId comments) + 1
+getNextId comments = maximum (map commentId comments) + 1
