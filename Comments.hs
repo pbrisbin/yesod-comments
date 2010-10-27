@@ -64,47 +64,53 @@ liftT :: (String -> String) -> Textarea -> Textarea
 liftT f = Textarea . f . unTextarea
 
 -- | The input form itself
---commentForm :: Maybe CommentForm -> Form s m CommentForm
---commentForm cf = fieldsToTable $ CommentForm
---    <$> userField    "name:"    (fmap formUser    cf)
---    <*> commentField "comment:" (fmap formComment cf)
---    <*> boolField    "html?"    (fmap formIsHtml  cf)
---
+commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentForm = do
+    (user, userField) <- stringField "name:" Nothing
+    (comment, commentField) <- textareaField "comment:" Nothing
+    (isHtml, isHtmlField) <- boolField "html?" Nothing
+    return (CommentForm <$> user <*> comment <*> isHtml, [$hamlet|
+    %p
+    ^fiInput.userField^
+    %b ^fiInput.commentField^
+    %b ^fiInput.isHtmlField^
+    |])
+
 -- | Provides a single call to retrieve the html for the comments
 --   section of a page
---runCommentsForm :: (Yesod m)
---                => ([Comment]
---                -> GWidget s m ()
---                -> Enctype
---                -> GWidget s m ()) -- ^ the overall template
---                -> CommentStorage  -- ^ how you store your comments
---                -> String          -- ^ the id for the thread you're requesting
---                -> Route m         -- ^ a route to redirect to after a POST
---                -> GHandler s m (Hamlet (Route m))
---runCommentsForm template db thread r = do
---    -- load existing comments
---    comments <- loadComments db thread
---    let cId = getNextId comments
---
---    -- run the form
---    ((res, form), enctype) <- runFormMonadPost commentForm
---    case res of
---        FormMissing    -> return ()
---        FormFailure _  -> return ()
---        FormSuccess cf -> do
---            comment <- commentFromForm thread cId cf
---            storeComment db comment
---            -- redirect to prevent accidental reposts and to clear the
---            -- form data
---            setMessage $ [$hamlet| %em comment added |]
---            redirect RedirectTemporary r
---
---    -- return it as a widget
---    --return $ template comments form enctype
---    
---    -- return it as hamlet; todo: this is a _hack_
---    pc <- widgetToPageContent $ template comments form enctype
---    return $ pageBody pc
+runCommentsForm :: (Yesod m)
+                => ([Comment]
+                -> GWidget s m ()
+                -> Enctype
+                -> GWidget s m ()) -- ^ the overall template
+                -> CommentStorage  -- ^ how you store your comments
+                -> String          -- ^ the id for the thread you're requesting
+                -> Route m         -- ^ a route to redirect to after a POST
+                -> GHandler s m (Hamlet (Route m))
+runCommentsForm template db thread r = do
+    -- load existing comments
+    comments <- loadComments db thread
+    let cId = getNextId comments
+
+    -- run the form
+    ((res, form), enctype) <- runFormMonadPost commentForm
+    case res of
+        FormMissing    -> return ()
+        FormFailure _  -> return ()
+        FormSuccess cf -> do
+            comment <- commentFromForm thread cId cf
+            storeComment db comment
+            -- redirect to prevent accidental reposts and to clear the
+            -- form data
+            setMessage $ [$hamlet| %em comment added |]
+            redirect RedirectTemporary r
+
+    -- return it as a widget
+    --return $ template comments form enctype
+    
+    -- return it as hamlet; todo: this is a _hack_
+    pc <- widgetToPageContent $ template comments form enctype
+    return $ pageBody pc
 
 -- | Get the next available comment Id, assumes the parameter list of
 --   commments is already filtered to a specific thread
