@@ -66,15 +66,49 @@ liftT f = Textarea . f . unTextarea
 -- | The input form itself
 commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentForm = do
-    (user, userField) <- stringField "name:" Nothing
+    (user   , userField   ) <- stringField   "name:"    Nothing
     (comment, commentField) <- textareaField "comment:" Nothing
-    (isHtml, isHtmlField) <- boolField "html?" Nothing
+    (isHtml , isHtmlField ) <- boolField     "html?"    Nothing
     return (CommentForm <$> user <*> comment <*> isHtml, [$hamlet|
-    %p
-    ^fiInput.userField^
-    %b ^fiInput.commentField^
-    %b ^fiInput.isHtmlField^
+    %table
+        %tr.$clazz.userField$
+            %td
+                %label!for=$fiIdent.userField$ $fiLabel.userField$
+                .tootip $fiTooltip.userField$
+            %td
+                ^fiInput.userField^
+            %td.errors
+                $maybe fiErrors.userField error
+                    $error$
+                $nothing
+                    &nbsp;
+
+        %tr.$clazz.commentField$
+            %td 
+                %label!for=$fiIdent.commentField$ $fiLabel.commentField$
+                .tooltip $fiTooltip.commentField$
+            %td!colspan="2" 
+                ^fiInput.commentField^
+
+        %tr.errors
+            %td &nbsp;
+            %td.errors!colspans="2"
+                $maybe fiErrors.commentField error
+                    $error$
+                $nothing
+                    &nbsp;
+
+        %tr.$clazz.isHtmlField$
+            %td 
+                %label!for=$fiIdent.isHtmlField$ $fiLabel.isHtmlField$
+                .tooltip $fiTooltip.isHtmlField$
+            %td 
+                ^fiInput.isHtmlField^
+            %td 
+                &nbsp;
     |])
+    where
+        clazz fi = string $ if fiRequired fi then "required" else "optional"
 
 -- | Provides a single call to retrieve the html for the comments
 --   section of a page
