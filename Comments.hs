@@ -115,7 +115,7 @@ commentForm = do
 runCommentsForm :: (Yesod m)
                 => CommentsTemplate -- ^ the overall template
                 -> CommentStorage   -- ^ how you store your comments
-                -> String           -- ^ the id for the thread you're requesting
+                -> ThreadId         -- ^ the id for the thread you're requesting
                 -> Route m          -- ^ a route to redirect to after a POST
                 -> GHandler s m (Hamlet (Route m))
 runCommentsForm template db thread r = do
