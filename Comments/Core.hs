@@ -24,11 +24,11 @@ module Comments.Core
 import Yesod
 import Data.Time.Clock (UTCTime)
 
--- | A unique thread identifier, usually a post slug.
+-- | A unique thread identifier, probably the post slug or similar
 type ThreadId = String
 
 -- | A unique identifier for a comment within a thread, usually an
---   incrementing number calculated as comments are added.
+--   incrementing number that the user need not deal with
 type CommentId = Int
 
 -- | A convenience synonym
@@ -45,7 +45,7 @@ data Comment = Comment
     } deriving Show
 
 -- | The form data type, this is used to gather the comment from the
---   user and is handed off to commentFromForm just before storeComment.
+--   user and is handed off to commentFromForm just before storeComment
 data CommentForm = CommentForm
     { formUser    :: String
     , formComment :: Textarea
@@ -54,9 +54,9 @@ data CommentForm = CommentForm
 
 -- | A data type to represent your backend. Provides total flexibility
 --   by abstracting the actual storage away behind the three required
---   functions. See 'Comments.Storage' for example backends.
-data CommentStorage = CommentStorage
-    { storeComment  :: (Yesod m) => Comment -> GHandler s m ()
-    , loadComments  :: (Yesod m) => ThreadId -> GHandler s m [Comment]
-    , deleteComment :: (Yesod m) => ThreadId -> CommentId -> GHandler s m ()
+--   functions. See 'Comments.Storage' for example backends
+data CommentStorage s m = CommentStorage
+    { storeComment  :: Comment  -> GHandler s m ()
+    , loadComments  :: ThreadId -> GHandler s m [Comment]
+    , deleteComment :: ThreadId -> CommentId -> GHandler s m ()
     }

@@ -23,16 +23,19 @@ import Comments.Storage
 
 import Yesod
 import Yesod.Form.Core
-import Control.Applicative        ((<$>), (<*>))
-import Data.Time.Clock            (getCurrentTime)
-import Network.Wai                (remoteHost)
-import Text.Hamlet                (toHtml)
-import Text.HTML.SanitizeXSS      (sanitizeXSS)
+import Control.Applicative   ((<$>), (<*>))
+import Data.Time.Clock       (getCurrentTime)
+import Network.Wai           (remoteHost)
+import Text.Hamlet           (toHtml)
+import Text.HTML.SanitizeXSS (sanitizeXSS)
 
 import qualified Data.ByteString.Char8 as B
 
 -- | Cleans form input and create a comment type to be stored
-commentFromForm :: ThreadId -> CommentId -> CommentForm -> GHandler s m Comment
+commentFromForm :: ThreadId 
+                -> CommentId 
+                -> CommentForm 
+                -> GHandler s m Comment
 commentFromForm tId cId cf = do
     timeNow <- liftIO getCurrentTime
     ip      <- return . B.unpack . remoteHost =<< waiRequest
@@ -64,7 +67,7 @@ commentFromForm tId cId cf = do
 liftT :: (String -> String) -> Textarea -> Textarea
 liftT f = Textarea . f . unTextarea
 
--- | The input form itself
+-- | The input form itself; todo: custom fields
 commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentForm = do
     (user   , userField   ) <- stringField   "name:"    Nothing
@@ -113,10 +116,10 @@ commentForm = do
 -- | Provides a single call to retrieve the html for the comments
 --   section of a page
 runCommentsForm :: (Yesod m)
-                => CommentsTemplate -- ^ the overall template
-                -> CommentStorage   -- ^ how you store your comments
-                -> ThreadId         -- ^ the id for the thread you're requesting
-                -> Route m          -- ^ a route to redirect to after a POST
+                => CommentsTemplate    -- ^ the overall template
+                -> CommentStorage s m  -- ^ how you store your comments
+                -> ThreadId            -- ^ the id for the thread you're requesting
+                -> Route m             -- ^ a route to redirect to after a POST
                 -> GHandler s m (Hamlet (Route m))
 runCommentsForm template db thread r = do
     -- load existing comments
