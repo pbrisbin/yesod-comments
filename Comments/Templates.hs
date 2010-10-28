@@ -26,7 +26,7 @@ import Data.Time.Format (formatTime)
 import System.Locale    (defaultTimeLocale)
 
 -- | A default template, entry box on top, comments shown below;
---   comments should be pass presorted as they should be displayed
+--   comments should be passed presorted
 defaultTemplate :: CommentsTemplate
 defaultTemplate comments form enctype = [$hamlet|
 #comments
@@ -48,7 +48,7 @@ defaultTemplate comments form enctype = [$hamlet|
         ^commentTemplate.comment^
 |]
 
--- | Same as default but with the entry box at the ened
+-- | Same as default but with the entry box at the end
 entryAfterTemplate :: CommentsTemplate
 entryAfterTemplate comments form enctype = [$hamlet|
 #comments
@@ -75,14 +75,14 @@ commentTemplate :: (HamletValue a) => Comment -> a
 commentTemplate comment = 
     let date = formatTime defaultTimeLocale "%a, %b %d at %H:%S" $ timeStamp comment
     in [$hamlet|
-%p
-    On 
-    %strong $date$
-    , 
-    %strong $userName.comment$
-    \ wrote:
-
-%blockquote
     %p
-        $content.comment$
-|]
+        On 
+        %strong $date$
+        , 
+        %strong $userName.comment$
+        \ wrote:
+
+    %blockquote
+        %p
+            $content.comment$
+    |]

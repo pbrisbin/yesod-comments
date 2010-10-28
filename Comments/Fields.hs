@@ -12,6 +12,8 @@
 --
 -- Custom field definitions used for username and comment input
 --
+-- todo: this is not 0.6 compatible
+--
 -------------------------------------------------------------------------------
 module Comments.Fields 
     ( userField
@@ -24,9 +26,8 @@ import Yesod.Form.Core
 import Control.Monad   (mplus)
 import Data.Maybe      (fromMaybe)
 
--- | A custom stringField but with special validation; todo: not 0.6
---   compatible
-userField :: String -> Maybe String -> GForm s m [FieldInfo s m] String
+-- | Like stringField but with special validation
+--userField :: String -> Maybe String -> GFormMonad s m (FormResult String, FieldInfo s m)
 userField label initial = GForm $ do
     userId   <- newFormIdent
     userName <- newFormIdent
@@ -46,9 +47,7 @@ userField label initial = GForm $ do
     let fi = FieldInfo { fiLabel   = string label
                        , fiTooltip = string ""
                        , fiIdent   = userId
-                       , fiInput   = [$hamlet|
-%input#userId!name=$userName$!type=text!value=$userValue$!size="20"
-|]
+                       , fiInput   = [$hamlet| %input#userId!name=$userName$!type=text!value=$userValue$!size="20" |]
                        , fiErrors =
                            case res of
                                FormFailure [x] -> Just $ string x
@@ -61,7 +60,7 @@ userField label initial = GForm $ do
         isValid s  = (s /= []) && all (`elem` validChars) s
         validChars = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ "-_. " 
 
--- | A copy of textareaField but with a larger entry box
+-- | Like textareaField but with a larger entry box
 commentField :: FormFieldSettings -> FormletField sub y Textarea
 commentField = requiredFieldHelper textareaFieldProfile'
 
@@ -69,7 +68,5 @@ textareaFieldProfile' :: FieldProfile sub y Textarea
 textareaFieldProfile' = FieldProfile
     { fpParse  = Right . Textarea
     , fpRender = unTextarea
-    , fpWidget = \theId name val _isReq -> addHamlet [$hamlet|
-%textarea#$theId$!name=$name$!cols="40"!rows="4" $val$
-|]
+    , fpWidget = \theId name val _isReq -> addHamlet [$hamlet| %textarea#$theId$!name=$name$!cols="40"!rows="4" $val$ |]
     }

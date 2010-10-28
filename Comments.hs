@@ -14,7 +14,11 @@
 -- A generic Comments interface for a Yesod application.
 --
 -------------------------------------------------------------------------------
-module Comments where
+module Comments 
+    ( runCommentsForm
+    , module Comments.Templates
+    , module Comments.Storage
+    ) where
 
 import Comments.Core
 import Comments.Fields
@@ -70,43 +74,43 @@ liftT f = Textarea . f . unTextarea
 -- | The input form itself; todo: custom fields
 commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentForm = do
-    (user   , userField   ) <- stringField   "name:"    Nothing
-    (comment, commentField) <- textareaField "comment:" Nothing
-    (isHtml , isHtmlField ) <- boolField     "html?"    Nothing
+    (user   , fiUser   ) <- stringField   "name:"    Nothing
+    (comment, fiComment) <- textareaField "comment:" Nothing
+    (isHtml , fiIsHtml ) <- boolField     "html?"    Nothing
     return (CommentForm <$> user <*> comment <*> isHtml, [$hamlet|
-    %tr.$clazz.userField$
+    %tr.$clazz.fiUser$
         %td
-            %label!for=$fiIdent.userField$ $fiLabel.userField$
-            .tootip $fiTooltip.userField$
+            %label!for=$fiIdent.fiUser$ $fiLabel.fiUser$
+            .tootip $fiTooltip.fiUser$
         %td
-            ^fiInput.userField^
+            ^fiInput.fiUser^
         %td.errors
-            $maybe fiErrors.userField error
+            $maybe fiErrors.fiUser error
                 $error$
             $nothing
                 &nbsp;
 
-    %tr.$clazz.commentField$
+    %tr.$clazz.fiComment$
         %td 
-            %label!for=$fiIdent.commentField$ $fiLabel.commentField$
-            .tooltip $fiTooltip.commentField$
+            %label!for=$fiIdent.fiComment$ $fiLabel.fiComment$
+            .tooltip $fiTooltip.fiComment$
         %td!colspan="2" 
-            ^fiInput.commentField^
+            ^fiInput.fiComment^
 
     %tr.errors
         %td &nbsp;
         %td.errors!colspans="2"
-            $maybe fiErrors.commentField error
+            $maybe fiErrors.fiComment error
                 $error$
             $nothing
                 &nbsp;
 
-    %tr.$clazz.isHtmlField$
+    %tr.$clazz.fiIsHtml$
         %td 
-            %label!for=$fiIdent.isHtmlField$ $fiLabel.isHtmlField$
-            .tooltip $fiTooltip.isHtmlField$
+            %label!for=$fiIdent.fiIsHtml$ $fiLabel.fiIsHtml$
+            .tooltip $fiTooltip.fiIsHtml$
         %td 
-            ^fiInput.isHtmlField^
+            ^fiInput.fiIsHtml^
         %td 
             &nbsp;
     |])
@@ -146,7 +150,7 @@ runCommentsForm template db thread r = do
     pc <- widgetToPageContent $ template comments form enctype
     return $ pageBody pc
 
--- | Get the next available comment Id, assumes the parameter list of
+-- | Get the next available comment Id, assumes the passed list of
 --   commments is already filtered to a specific thread
 getNextId :: [Comment] -> CommentId
 getNextId []       = 0
