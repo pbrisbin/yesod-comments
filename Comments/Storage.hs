@@ -20,6 +20,7 @@ module Comments.Storage
     ( testDB
     , fileDB
     , persistentDB
+    , migrateAll
     ) where
 
 import Yesod
@@ -32,6 +33,9 @@ import Data.Maybe       (mapMaybe, maybeToList)
 import System.IO        (hPutStrLn, stderr)
 import System.Locale    (defaultTimeLocale)
 
+import Database.Persist.TH         (share2)
+import Database.Persist.GenericSql (mkMigrate)
+
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as L
 
@@ -39,6 +43,7 @@ import qualified Data.ByteString.Lazy.Char8 as L
 -- each other and ghc leaves the handles open
 import qualified System.IO.Strict
 
+-- some utilities
 htmlToString :: Html -> String
 htmlToString = L.unpack . renderHtml
 
@@ -110,9 +115,9 @@ fileDB f = CommentStorage
     }
     where
 
--- | What about migration? will my first insert create the tables
---   automagically?
-mkPersist [$persist|
+-- | Create the required types and migration function for use in a
+--   general yesod app
+share2 mkPersist (mkMigrate "migrateAll") [$persist|
 SqlComment
     threadId  String Eq
     commentId Int Eq Asc
