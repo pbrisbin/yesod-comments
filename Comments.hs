@@ -143,9 +143,6 @@ runCommentsForm template db thread r = do
             setMessage $ [$hamlet| %em comment added |]
             redirect RedirectTemporary r
 
-    -- return it as a widget
-    --return $ template comments form enctype
-    
     -- return it as hamlet; todo: this is a _hack_
     pc <- widgetToPageContent $ template comments form enctype
     return $ pageBody pc
