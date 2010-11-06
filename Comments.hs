@@ -11,17 +11,26 @@
 -- Stability   :  unstable
 -- Portability :  unportable
 --
--- A generic Comments interface for a Yesod application.
+-- A generic Comments interface for a Yesod application. This module is
+-- in the early stages of development. Beware bugs, patches welcome.
+--
+-- See http://github.com/pbrisbin/yesod-comments/blob/master/Test.hs for
+-- example usage.
 --
 -------------------------------------------------------------------------------
-module Comments 
-    ( runCommentsForm
-    , module Comments.Templates
-    , module Comments.Storage
+module Comments ( 
+    -- * Usage
+    -- $usage
+    runCommentsForm,
+    -- * Templates
+    -- $templates
+    module Comments.Templates,
+    -- * Storage
+    -- $storage
+    module Comments.Storage
     ) where
 
 import Comments.Core
-import Comments.Fields
 import Comments.Templates
 import Comments.Storage
 
@@ -32,8 +41,33 @@ import Data.Time.Clock       (getCurrentTime)
 import Network.Wai           (remoteHost)
 import Text.Hamlet           (toHtml)
 import Text.HTML.SanitizeXSS (sanitizeXSS)
-
 import qualified Data.ByteString.Char8 as B
+
+-- $usage
+--
+-- Use the function 'runCommentsForm' to retrieve 'Hamlet' corresponding
+-- to a comments section for the currently displaying page.
+--
+
+-- $templates
+--
+-- In "Comments.Templates" you'll find prebuilt templates defining the
+-- layout of the comments section.
+--
+-- You could also define your own; see "Comments.Core" for the
+-- 'CommentsTemplate' type synonym, it's essentially 
+--
+-- > :: [Comment] -> Widget ()
+--
+
+-- $storage
+--
+-- In "Comments.Storage" you'll find some prebuilt backends for use in
+-- persisting the comments. Again, you could roll you're own by
+-- defining a function of type 'CommentStorage' by specifying how to
+-- read comments by 'ThreadId', how to store a comment, and how to
+-- delete a comment.
+--
 
 -- | Cleans form input and create a comment type to be stored
 commentFromForm :: ThreadId 
@@ -67,11 +101,13 @@ commentFromForm tId cId cf = do
         stripCR ('\r':rest) =     stripCR rest
         stripCR (x:rest)    = x : stripCR rest
 
--- | lift a String function into Textara
+-- | lift a String function into Textarea
 liftT :: (String -> String) -> Textarea -> Textarea
 liftT f = Textarea . f . unTextarea
 
--- | The input form itself; todo: custom fields
+-- | The input form itself
+--   todo: use custom input fields
+--   todo: should this go in "Comments.Templates"?
 commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentForm = do
     (user   , fiUser   ) <- stringField   "name:"    Nothing
@@ -94,12 +130,9 @@ commentForm = do
         %td 
             %label!for=$fiIdent.fiComment$ $fiLabel.fiComment$
             .tooltip $fiTooltip.fiComment$
-        %td!colspan="2" 
+        %td
             ^fiInput.fiComment^
-
-    %tr.errors
-        %td &nbsp;
-        %td.errors!colspans="2"
+        %td.errors
             $maybe fiErrors.fiComment error
                 $error$
             $nothing
@@ -117,8 +150,7 @@ commentForm = do
     where
         clazz fi = string $ if fiRequired fi then "required" else "optional"
 
--- | Provides a single call to retrieve the html for the comments
---   section of a page
+-- | The single call to retrieve the hamlet for the comments
 runCommentsForm :: (Yesod m)
                 => CommentsTemplate    -- ^ the overall template
                 -> CommentStorage s m  -- ^ how you store your comments
@@ -143,12 +175,11 @@ runCommentsForm template db thread r = do
             setMessage $ [$hamlet| %em comment added |]
             redirect RedirectTemporary r
 
-    -- return it as hamlet; todo: this is a _hack_
-    pc <- widgetToPageContent $ template comments form enctype
-    return $ pageBody pc
+    -- widget -> hamlet; todo: there's a better way to do this right?
+    return . pageBody =<< widgetToPageContent (template comments form enctype)
 
 -- | Get the next available comment Id, assumes the passed list of
 --   commments is already filtered to a specific thread
 getNextId :: [Comment] -> CommentId
-getNextId []       = 0
+getNextId []       = 1
 getNextId comments = maximum (map commentId comments) + 1

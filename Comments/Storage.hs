@@ -12,8 +12,7 @@
 -- Stability   :  unstable
 -- Portability :  unportable
 --
--- Some pre-built backend definitions. So far just test and file, soon
--- persistent.
+-- Some pre-built backend definitions for use with 'Comment.runCommentsForm'
 --
 -------------------------------------------------------------------------------
 module Comments.Storage
@@ -39,11 +38,11 @@ import Database.Persist.GenericSql (mkMigrate)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as L
 
--- strict reads are required since reading/writing occur so close to
--- each other and ghc leaves the handles open
+-- | strict reads are required since reading/writing occur so close to
+--   each other and ghc leaves the handles open
 import qualified System.IO.Strict
 
--- some utilities
+-- | some utilities
 htmlToString :: Html -> String
 htmlToString = L.unpack . renderHtml
 
@@ -54,7 +53,7 @@ parseTime' :: String -> Maybe UTCTime
 parseTime' = parseTime defaultTimeLocale "%s"
 
 -- | For use during testing, always loads no comments and prints the
---   comment to stderr as "store"
+--   comment to stderr as the /store/ action
 testDB :: CommentStorage s m
 testDB = CommentStorage
     { storeComment  = liftIO . hPutStrLn stderr . show
@@ -62,7 +61,7 @@ testDB = CommentStorage
     , deleteComment = \_ _ -> return ()
     }
 
--- | Convert a 'Comment' into a pipe delimeted string for storage as a
+-- | Convert a 'Comment' into a pipe-delimited string for storage as a
 --   single line in a file
 toFileString :: Comment -> String
 toFileString comment = concat
@@ -100,11 +99,12 @@ fromFileString thread str =
                 else Nothing
         _ -> Nothing
 
--- | A simple flat file storage method, this is way unreliable, probably
---   wicked slow, but dead simple to setup/use
+-- | A simple flat file storage method; this is dead-simple to setup but
+--   probably shouldn't be used since it's unreliable and likely to be
+--   slow
 fileDB :: (Yesod m) => FilePath -> CommentStorage s m
 fileDB f = CommentStorage
-    { storeComment = \comment -> liftIO $ appendFile f (toFileString comment)
+    { storeComment = liftIO . appendFile f . toFileString
 
     , loadComments = \id -> do
         contents <- liftIO $ System.IO.Strict.readFile f
@@ -156,7 +156,8 @@ fromSqlComment sqlComment =
         Nothing -> Nothing
 
 -- | If your app is an instance of YesodPersist, you can use this
---   backend to store comments in your database
+--   backend to store comments in your database without any further
+--   changes to your app.
 persistentDB :: (YesodPersist m, 
                  PersistBackend (YesodDB m (GHandler s m))) 
              => CommentStorage s m

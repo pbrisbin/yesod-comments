@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies    #-}
 --
+-- pbrisbin 2010
+--
 -- This is a single-file test application which shows how to use the
 -- comments module.
 --
@@ -52,7 +54,7 @@ getRootR = do
                 %h1 Test Page
                 %p
                   Welcome to my comments test page. It's very ugly 
-                  because I'm using no styling whatsoever. However, the
+                  because I'm using no styling whatsoever. However, the 
                   entire comments section is wrapped in a 
                   %em comments
                   \ div tag to make styling simple.
@@ -61,7 +63,7 @@ getRootR = do
         -- | Since page comments is 'Hamlet', we can either ^include^ it
         --   in another template where appropriate, or (in this case)
         --   use 'addHamlet' to add it to a widget.
-        addHamlet $ pageComments
+        addHamlet pageComments
 
 -- | POST is just GET in our case
 postRootR :: Handler RepHtml
