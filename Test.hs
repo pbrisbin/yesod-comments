@@ -33,23 +33,6 @@ mkYesod "CommentTest" [$parseRoutes|
 
 instance Yesod CommentTest where
     approot _ = ""
-    defaultLayout widget = do
-
-        mmsg <- getMessage
-        pc <- widgetToPageContent $ do
-            widget
-        hamletToRepHtml $
-            [$hamlet|
-            !!!
-            %html
-                %head
-                    %title $pageTitle.pc$
-                    ^pageHead.pc^
-                %body
-                    $maybe mmsg msg
-                        #message $msg$
-                    ^pageBody.pc^
-            |]
 
 instance YesodPersist CommentTest where
     type YesodDB CommentTest = SqlPersist
