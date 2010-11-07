@@ -42,6 +42,7 @@ import Network.Wai           (remoteHost)
 import Text.Hamlet           (toHtml)
 import Text.HTML.SanitizeXSS (sanitizeXSS)
 import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as L
 
 -- $usage
 --
@@ -52,8 +53,7 @@ import qualified Data.ByteString.Char8 as B
 -- $templates
 --
 -- In "Comments.Templates" you'll find prebuilt templates defining the
--- layout of the comments section.
---
+-- layout of the comments section.  --
 -- You could also define your own; see "Comments.Core" for the
 -- 'CommentsTemplate' type synonym, it's essentially 
 --
@@ -69,7 +69,57 @@ import qualified Data.ByteString.Char8 as B
 -- delete a comment.
 --
 
--- | Cleans form input and create a comment type to be stored
+-- | Sub-template for the input form itself; todo: use custom input
+--   fields for validation/sizing
+commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentForm = do
+    (user   , fiUser   ) <- stringField   "name:"    Nothing
+    (comment, fiComment) <- textareaField "comment:" Nothing
+    (isHtml , fiIsHtml ) <- boolField     "html?"    Nothing
+    return (CommentForm <$> user <*> comment <*> isHtml, [$hamlet|
+    %table
+        %tr.$clazz.fiUser$
+            %td
+                %label!for=$fiIdent.fiUser$ $fiLabel.fiUser$
+                .tootip $fiTooltip.fiUser$
+            %td
+                ^fiInput.fiUser^
+            %td.errors
+                $maybe fiErrors.fiUser error
+                    $error$
+                $nothing
+                    &nbsp;
+
+        %tr.$clazz.fiComment$
+            %td 
+                %label!for=$fiIdent.fiComment$ $fiLabel.fiComment$
+                .tooltip $fiTooltip.fiComment$
+            %td
+                ^fiInput.fiComment^
+            %td.errors
+                $maybe fiErrors.fiComment error
+                    $error$
+                $nothing
+                    &nbsp;
+
+        %tr.$clazz.fiIsHtml$
+            %td 
+                %label!for=$fiIdent.fiIsHtml$ $fiLabel.fiIsHtml$
+                .tooltip $fiTooltip.fiIsHtml$
+            %td 
+                ^fiInput.fiIsHtml^
+            %td 
+                &nbsp;
+        %tr
+            %td
+                &nbsp;
+            %td!colspan="2"
+                %input!type="submit"!value="Add comment"
+    |])
+    where
+        clazz fi = string $ if fiRequired fi then "required" else "optional"
+
+-- | Cleanse form input and create a comment type to be stored
 commentFromForm :: ThreadId 
                 -> CommentId 
                 -> CommentForm 
@@ -88,7 +138,7 @@ commentFromForm tId cId cf = do
         
         -- the user intends plaintext
         textToHtml :: Textarea -> Html
-        textToHtml = toHtml . liftT stripCR
+        textToHtml = liftH wrapP . toHtml . liftT stripCR
 
         -- with html, \r\n and \n should always become space
         stripCRLF []               = []
@@ -101,54 +151,15 @@ commentFromForm tId cId cf = do
         stripCR ('\r':rest) =     stripCR rest
         stripCR (x:rest)    = x : stripCR rest
 
+        wrapP = ("<p>"++) . (++"</p>")
+
 -- | lift a String function into Textarea
 liftT :: (String -> String) -> Textarea -> Textarea
 liftT f = Textarea . f . unTextarea
 
--- | The input form itself
---   todo: use custom input fields
---   todo: should this go in "Comments.Templates"?
-commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
-commentForm = do
-    (user   , fiUser   ) <- stringField   "name:"    Nothing
-    (comment, fiComment) <- textareaField "comment:" Nothing
-    (isHtml , fiIsHtml ) <- boolField     "html?"    Nothing
-    return (CommentForm <$> user <*> comment <*> isHtml, [$hamlet|
-    %tr.$clazz.fiUser$
-        %td
-            %label!for=$fiIdent.fiUser$ $fiLabel.fiUser$
-            .tootip $fiTooltip.fiUser$
-        %td
-            ^fiInput.fiUser^
-        %td.errors
-            $maybe fiErrors.fiUser error
-                $error$
-            $nothing
-                &nbsp;
-
-    %tr.$clazz.fiComment$
-        %td 
-            %label!for=$fiIdent.fiComment$ $fiLabel.fiComment$
-            .tooltip $fiTooltip.fiComment$
-        %td
-            ^fiInput.fiComment^
-        %td.errors
-            $maybe fiErrors.fiComment error
-                $error$
-            $nothing
-                &nbsp;
-
-    %tr.$clazz.fiIsHtml$
-        %td 
-            %label!for=$fiIdent.fiIsHtml$ $fiLabel.fiIsHtml$
-            .tooltip $fiTooltip.fiIsHtml$
-        %td 
-            ^fiInput.fiIsHtml^
-        %td 
-            &nbsp;
-    |])
-    where
-        clazz fi = string $ if fiRequired fi then "required" else "optional"
+-- | lift a String funciton into Html
+liftH :: (String -> String) -> Html -> Html
+liftH f = preEscapedString . f . L.unpack . renderHtml
 
 -- | The single call to retrieve the hamlet for the comments
 runCommentsForm :: (Yesod m)
@@ -168,14 +179,16 @@ runCommentsForm template db thread r = do
         FormMissing    -> return ()
         FormFailure _  -> return ()
         FormSuccess cf -> do
-            comment <- commentFromForm thread cId cf
-            storeComment db comment
+            -- store the entered comment
+            commentFromForm thread cId cf >>= storeComment db
+            setMessage $ [$hamlet| %em comment added |]
+
             -- redirect to prevent accidental reposts and to clear the
             -- form data
-            setMessage $ [$hamlet| %em comment added |]
             redirect RedirectTemporary r
 
-    -- widget -> hamlet; todo: there's a better way to do this right?
+    -- like extractBody but in the GHandler Monad; todo: there's a
+    -- better way to do this right?
     return . pageBody =<< widgetToPageContent (template comments form enctype)
 
 -- | Get the next available comment Id, assumes the passed list of

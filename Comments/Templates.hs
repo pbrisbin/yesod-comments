@@ -19,32 +19,25 @@ module Comments.Templates
     , commentTemplate
     ) where
 
-import Yesod
 import Comments.Core
 
+import Yesod
 import Text.Hamlet      (HamletValue)
 import Data.Time.Format (formatTime)
 import System.Locale    (defaultTimeLocale)
 
 -- | A default template, entry box on top, comments shown below;
---   comments should be passed presorted
+--   comments are expected to be sorted already
 defaultTemplate :: CommentsTemplate
 defaultTemplate comments form enctype = [$hamlet|
 #comments
-    %h2
-        %a!href="#comments"!id="#comments" Comments
-
     %h4 Add a comment:
+
     %form!enctype=$enctype$!method="post"
-        %table
-            ^form^
-            %tr
-                %td
-                    &nbsp;
-                %td!colspan="2"
-                    %input!type="submit"!value="Add comment"
+        ^form^
+
     %p 
-        %em when using html, assume your text will be wrapped in &lt;p&gt &lt;/p&gt;
+        %em if using html, please keep it well-formed and valid (ex: &lt;p&gt;Hello&lt;/p&gt;).
 
     %h4 Showing $string.show.length.comments$ comments:
 
@@ -56,29 +49,22 @@ defaultTemplate comments form enctype = [$hamlet|
 entryAfterTemplate :: CommentsTemplate
 entryAfterTemplate comments form enctype = [$hamlet|
 #comments
-    %h2
-        %a!href="#comments"!id="#comments" Comments
-
     %h4 Showing $string.show.length.comments$ comments:
 
     $forall comments comment
         ^commentTemplate.comment^
 
     %h4 Add a comment:
+
     %form!enctype=$enctype$!method="post"
-        %table
-            ^form^
-            %tr
-                %td
-                    &nbsp;
-                %td!colspan="2"
-                    %input!type="submit"!value="Add comment"
+        ^form^
+
     %p 
-        %em when using html, assume your text will be wrapped in &lt;p&gt &lt;/p&gt;
+        %em if using html, please keep it well-formed and valid (ex: &lt;p&gt;Hello&lt;/p&gt;).
 |]
 
--- | Example sub-template for a single comment, provides numbered
---   anchors to each comment.
+-- | Sub-template for a single comment, provides numbered anchors to
+--   each comment.
 commentTemplate :: (HamletValue a) => Comment -> a
 commentTemplate comment = 
     let date = formatTime defaultTimeLocale "%a, %b %d at %H:%S" $ timeStamp comment
@@ -93,6 +79,6 @@ commentTemplate comment =
         \ wrote:
 
     %blockquote
-        %p
-            $content.comment$
+        $content.comment$
     |]
+

@@ -5,7 +5,7 @@
 -- pbrisbin 2010
 --
 -- This is a single-file test application which shows how to use the
--- comments module.
+-- comments module to add comments to an arbitrary page.
 --
 module Test where
 
@@ -49,21 +49,86 @@ getRootR = do
 
     defaultLayout $ do
         setTitle $ string "test homepage"
-        addWidget $
+
+        -- | and just ^embed^ it in your template where desired.
+        addHamlet $
             [$hamlet|
-                %h1 Test Page
-                %p
-                  Welcome to my comments test page. It's very ugly 
-                  because I'm using no styling whatsoever. However, the 
-                  entire comments section is wrapped in a 
-                  %em comments
-                  \ div tag to make styling simple.
+                #header
+                    %h1 Test Page
+                    %hr
+                #body
+                    %p Welcome to my comments test page.
+                    %h3 Comments
+                    ^pageComments^
+                #footer
+                    %hr
+                    %p pbrisbin 2010
             |]
 
-        -- | Since page comments is 'Hamlet', we can either ^include^ it
-        --   in another template where appropriate, or (in this case)
-        --   use 'addHamlet' to add it to a widget.
-        addHamlet pageComments
+        -- | An example of the kind of styling you can do.
+        addCassius $
+            [$cassius|
+                body
+                    display: block
+                    width: 710px
+                    margin-left: auto
+                    margin-right: auto
+                    color: #bbbbbb
+                    background-color: #303030
+                    font-family: Verdana, sans-serif
+                    font-weight: normal
+
+                h1
+                    color: #ffffff
+                    text-align: center
+                    font-weight: normal
+
+                h3
+                    color: #ffffff
+                    font-weight: normal
+                    margin-left: -5%
+
+                h4
+                    color: #ffffff
+                    font-weight: normal
+                    margin-left: -2%
+
+                #comments
+                      border: 1px solid #ffffff
+                      border-top: 1px solid #909090
+                      border-right: 1px solid #909090
+                      padding-left: 5%  
+                      padding-right: 5%  
+                      padding-bottom: 1%
+                      font-size: 90% 
+
+                #comments blockquote
+                      color: #9c9c6b
+                      font-style: italic
+                      border-left: solid 3px #404040
+                      padding-left: 2%  
+                      padding-bottom: 1%
+
+                #comments td
+                      vertical-align: top 
+
+                #footer
+                    text-align: center
+                    font-size: 85%
+                a:link, a:visited
+                    color: #91bfc2
+                    outline: none
+                    text-decoration: none
+
+                a:hover
+                    color: #a291c2
+                    outline: none
+                    text-decoration: none
+
+                strong
+                    color: #ffffff
+                    font-weight: normal
+            |]
 
 -- | POST is just GET in our case
 postRootR :: Handler RepHtml
