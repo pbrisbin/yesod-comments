@@ -19,7 +19,7 @@ module Comments.Storage
     ( testDB
     , fileDB
     , persistentDB
-    , migrateAll
+    , migrateComments
     ) where
 
 import Yesod
@@ -117,7 +117,7 @@ fileDB f = CommentStorage
 
 -- | Create the required types and migration function for use in a
 --   general yesod app
-share2 mkPersist (mkMigrate "migrateAll") [$persist|
+share2 mkPersist (mkMigrate "migrateComments") [$persist|
 SqlComment
     threadId  String Eq
     commentId Int Eq Asc
