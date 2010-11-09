@@ -140,6 +140,8 @@ main = putStrLn "Loaded" >> withCommentTest (run 3000)
 
 withCommentTest :: (Application -> IO a) -> IO a
 withCommentTest f = withConnectionPool $ \p -> do
-    runSqlPool (runMigration migrateAll) p
+    -- | make sure you run the migration to create the necessary tables,
+    --   "Comments.Storage" exports 'migrateComments' for this purpose.
+    runSqlPool (runMigration migrateComments) p
     let h = CommentTest p
     toWaiApp h >>= f
