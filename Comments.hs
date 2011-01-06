@@ -81,7 +81,7 @@ commentForm = do
         %tr.$clazz.fiUser$
             %td
                 %label!for=$fiIdent.fiUser$ $fiLabel.fiUser$
-                .tootip $fiTooltip.fiUser$
+                .tooltip $fiTooltip.fiUser$
             %td
                 ^fiInput.fiUser^
             %td.errors
