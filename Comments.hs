@@ -171,7 +171,7 @@ runCommentsForm :: (Yesod m)
 runCommentsForm template db thread r = do
     -- load existing comments
     comments <- loadComments db thread
-    let cId = getNextId comments
+    cId      <- getNextId comments
 
     -- run the form
     ((res, form), enctype) <- runFormMonadPost commentForm
@@ -192,7 +192,8 @@ runCommentsForm template db thread r = do
     return . pageBody =<< widgetToPageContent (template comments form enctype)
 
 -- | Get the next available comment Id, assumes the passed list of
---   commments is already filtered to a specific thread
-getNextId :: [Comment] -> CommentId
-getNextId []       = 1
-getNextId comments = maximum (map commentId comments) + 1
+--   commments is already filtered to a specific thread, it's in the
+--   Handler Monad incase data base actions are required in the future
+getNextId :: [Comment] -> GHandler s m CommentId
+getNextId []       = return 1
+getNextId comments = return $ maximum (map commentId comments) + 1
