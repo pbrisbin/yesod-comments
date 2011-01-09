@@ -121,7 +121,7 @@ share2 mkPersist (mkMigrate "migrateComments") [$persist|
 SqlComment
     threadId  String Eq
     commentId Int Eq Asc
-    timeStamp String
+    timeStamp UTCTime
     ipAddress String
     userName  String
     content   String
@@ -131,29 +131,24 @@ SqlComment
 -- | Make a SqlComment out of a 'Comment' for passing off to insert
 toSqlComment :: Comment -> SqlComment
 toSqlComment comment = SqlComment
-    { sqlCommentThreadId  = threadId comment
+    { sqlCommentThreadId  = threadId  comment
     , sqlCommentCommentId = commentId comment
-    , sqlCommentTimeStamp = formatTime' $ timeStamp comment
+    , sqlCommentTimeStamp = timeStamp comment
     , sqlCommentIpAddress = ipAddress comment
-    , sqlCommentUserName  = userName comment
+    , sqlCommentUserName  = userName  comment
     , sqlCommentContent   = htmlToString $ content comment
     }
 
 -- | Maybe read a 'Comment' back from a selected SqlComment
-fromSqlComment :: SqlComment -> Maybe Comment
-fromSqlComment sqlComment = 
-    case parseTime' $ sqlCommentTimeStamp sqlComment of
-        Just utc -> Just
-            Comment
-                { threadId  = sqlCommentThreadId sqlComment
-                , commentId = sqlCommentCommentId sqlComment
-                , timeStamp = utc
-                , ipAddress = sqlCommentIpAddress sqlComment
-                , userName  = sqlCommentUserName sqlComment
-                , content   = preEscapedString $ sqlCommentContent sqlComment
-                }
-
-        Nothing -> Nothing
+fromSqlComment :: SqlComment -> Comment
+fromSqlComment sqlComment = Comment
+    { threadId  = sqlCommentThreadId  sqlComment
+    , commentId = sqlCommentCommentId sqlComment
+    , timeStamp = sqlCommentTimeStamp sqlComment
+    , ipAddress = sqlCommentIpAddress sqlComment
+    , userName  = sqlCommentUserName  sqlComment
+    , content   = preEscapedString $ sqlCommentContent sqlComment
+    }
 
 -- | If your app is an instance of YesodPersist, you can use this
 --   backend to store comments in your database without any further
@@ -168,7 +163,7 @@ persistentDB = CommentStorage
 
     , loadComments = \tid -> do
         results <- runDB $ selectList [SqlCommentThreadIdEq tid] [SqlCommentCommentIdAsc] 0 0
-        return $ mapMaybe fromSqlComment $ map snd results
+        return $ map (fromSqlComment . snd) results
 
     , deleteComment = \tid cid -> runDB $ deleteBy $ UniqueSqlComment tid cid
     }
