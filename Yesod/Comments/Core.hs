@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 -------------------------------------------------------------------------------
 -- |
--- Module      :  Comments.Core
+-- Module      :  Yesod.Comments.Core
 -- Copyright   :  (c) Patrick Brisbin 2010 
 -- License     :  as-is
 --
@@ -12,7 +12,7 @@
 -- Core comment data types.
 --
 -------------------------------------------------------------------------------
-module Comments.Core 
+module Yesod.Comments.Core 
     ( Comment(..)
     , ThreadId
     , CommentId

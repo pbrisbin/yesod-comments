@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 -------------------------------------------------------------------------------
 -- |
--- Module      :  Comments.Templates
+-- Module      :  Yesod.Comments.Templates
 -- Copyright   :  (c) Patrick Brisbin 2010 
 -- License     :  as-is
 --
@@ -13,13 +13,13 @@
 -- Some pre-built templates for use with 'Comments.runCommentsForm'.
 --
 -------------------------------------------------------------------------------
-module Comments.Templates 
+module Yesod.Comments.Templates 
     ( defaultTemplate
     , entryAfterTemplate
     , commentTemplate
     ) where
 
-import Comments.Core
+import Yesod.Comments.Core
 
 import Yesod
 import Text.Hamlet      (HamletValue)

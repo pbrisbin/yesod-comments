@@ -9,7 +9,7 @@
 --
 module Test where
 
-import Comments
+import Yesod.Comments
 
 import Yesod
 import Network.Wai.Handler.SimpleServer

@@ -48,7 +48,7 @@ Cabal-version:       >=1.2
 
 Library
   -- Modules exported by the library.
-  Exposed-modules:     Comments, Comments.Templates, Comments.Storage, Comments.Core, Comments.Fields
+  Exposed-modules:     Yesod.Comments, Yesod.Comments.Templates, Yesod.Comments.Storage, Yesod.Comments.Core, Yesod.Comments.Fields
   
   -- Packages needed in order to build this package.
   -- Build-depends:       

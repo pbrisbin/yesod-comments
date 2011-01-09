@@ -15,7 +15,7 @@
 -- todo: this is not 0.6 compatible
 --
 -------------------------------------------------------------------------------
-module Comments.Fields 
+module Yesod.Comments.Fields 
     ( userField
     , commentField
     ) where

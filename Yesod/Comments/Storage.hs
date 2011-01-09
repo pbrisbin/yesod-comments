@@ -4,7 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -------------------------------------------------------------------------------
 -- |
--- Module      :  Comments.Storage
+-- Module      :  Yesod.Comments.Storage
 -- Copyright   :  (c) Patrick Brisbin 2010 
 -- License     :  as-is
 --
@@ -15,7 +15,7 @@
 -- Some pre-built backend definitions for use with 'Comment.runCommentsForm'
 --
 -------------------------------------------------------------------------------
-module Comments.Storage
+module Yesod.Comments.Storage
     ( testDB
     , fileDB
     , persistentDB
@@ -23,7 +23,7 @@ module Comments.Storage
     ) where
 
 import Yesod
-import Comments.Core
+import Yesod.Comments.Core
 
 import Data.List.Split  (wordsBy)
 import Data.Time.Clock  (UTCTime)

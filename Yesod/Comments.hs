@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes        #-}
 -------------------------------------------------------------------------------
 -- |
--- Module      :  Comments
+-- Module      :  Yesod.Comments
 -- Copyright   :  (c) Patrick Brisbin 2010 
 -- License     :  as-is
 --
@@ -18,21 +18,21 @@
 -- example usage.
 --
 -------------------------------------------------------------------------------
-module Comments ( 
+module Yesod.Comments ( 
     -- * Usage
     -- $usage
     runCommentsForm,
     -- * Templates
     -- $templates
-    module Comments.Templates,
+    module Yesod.Comments.Templates,
     -- * Storage
     -- $storage
-    module Comments.Storage
+    module Yesod.Comments.Storage
     ) where
 
-import Comments.Core
-import Comments.Templates
-import Comments.Storage
+import Yesod.Comments.Core
+import Yesod.Comments.Templates
+import Yesod.Comments.Storage
 
 import Yesod
 import Yesod.Form.Core
