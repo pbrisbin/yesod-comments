@@ -25,6 +25,7 @@ module Yesod.Comments.Storage
 import Yesod
 import Yesod.Comments.Core
 
+import Control.Monad    (when)
 import Data.List.Split  (wordsBy)
 import Data.Time.Clock  (UTCTime)
 import Data.Time.Format (parseTime, formatTime)
@@ -83,20 +84,18 @@ toFileString comment = concat
 fromFileString :: String -> String -> Maybe Comment
 fromFileString thread str =
     case wordsBy (=='|') str of
-        [t, c, ts, ip, u, h] -> 
-            if t == thread
-                then case parseTime' ts of
-                    Just utc -> Just
-                        Comment
-                            { threadId  = t
-                            , commentId = read c :: Int
-                            , timeStamp = utc
-                            , ipAddress = ip
-                            , userName  = u
-                            , content   = preEscapedString h
-                            }
-                    _ -> Nothing
-                else Nothing
+        -- monadic maybe shenanigans
+        [t, c, ts, ip, u, h] -> do
+            when (t /= thread) (fail [])
+            parseTime' ts >>= \utc ->
+                return $ Comment
+                    { threadId  = t
+                    , commentId = read c :: Int
+                    , timeStamp = utc
+                    , ipAddress = ip
+                    , userName  = u
+                    , content   = preEscapedString h
+                    }
         _ -> Nothing
 
 -- | A simple flat file storage method; this is dead-simple to setup but
