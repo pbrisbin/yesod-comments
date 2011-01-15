@@ -1,25 +1,25 @@
-Name:                yesod-comments
-Version:             0.1
-Synopsis:            A generic comments interface for a Yesod application
-Homepage:            http://github.com/pbrisbin/yesod-comments
-License:             BSD3
-License-file:        LICENSE
-Author:              Patrick Brisbin
-Maintainer:          me@pbrisbin.com
-Category:            Web
-Build-type:          Simple
-Cabal-version:       >=1.2
+name:                yesod-comments
+version:             0.1
+synopsis:            A generic comments interface for a Yesod application
+homepage:            http://github.com/pbrisbin/yesod-comments
+license:             BSD3
+license-file:        LICENSE
+author:              Patrick Brisbin
+maintainer:          me@pbrisbin.com
+category:            Web, Yesod
+build-type:          Simple
+cabal-version:       >=1.2
 
-Library
+library
   -- Modules exported by the library.
-  Exposed-modules: Yesod.Comments, Yesod.Comments.Templates, Yesod.Comments.Storage, Yesod.Comments.Core, Yesod.Comments.Fields
+  exposed-modules: Yesod.Comments, Yesod.Comments.Templates, Yesod.Comments.Storage, Yesod.Comments.Core, Yesod.Comments.Fields
   
   -- Packages needed in order to build this package.
-  Build-depends: base, time, old-locale, bytestring, yesod, wai, persistent, xss-sanitize, hamlet, wai
+  build-depends: base, time, old-locale, bytestring, yesod, wai, persistent, xss-sanitize, hamlet, wai
   
-  -- Modules not exported by this package.
-  -- Other-modules:       
+  ghc-options: -Wall
   
-  -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
-  -- Build-tools:         
+source-repository head
+  type:         git
+  location:     git://github.com/pbrisbin/yesod-comments.git
   
