@@ -14,8 +14,9 @@
 -- A generic Comments interface for a Yesod application. This module is
 -- in the early stages of development. Beware bugs, patches welcome.
 --
--- See http://github.com/pbrisbin/yesod-comments/blob/master/Test.hs for
--- example usage.
+-- See 
+-- @http:\/\/github.com\/pbrisbin\/yesod-comments\/blob\/master\/Test.hs@ 
+-- for example usage.
 --
 -------------------------------------------------------------------------------
 module Yesod.Comments ( 
