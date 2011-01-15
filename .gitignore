@@ -2,3 +2,4 @@
 *.hi
 *.aes
 *.db3
+dist/
