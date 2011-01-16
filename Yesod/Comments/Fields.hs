@@ -12,7 +12,7 @@
 --
 -- Custom field definitions used for username and comment input
 --
--- todo: this is not 0.6 compatible
+-- todo: this does not work.
 --
 -------------------------------------------------------------------------------
 module Yesod.Comments.Fields 
@@ -27,7 +27,7 @@ import Control.Monad   (mplus)
 import Data.Maybe      (fromMaybe)
 
 -- | Like stringField but with special validation
---userField :: String -> Maybe String -> GFormMonad s m (FormResult String, FieldInfo s m)
+userField :: String -> Maybe String -> GForm s m [FieldInfo sub y] String
 userField label initial = GForm $ do
     userId   <- newFormIdent
     userName <- newFormIdent

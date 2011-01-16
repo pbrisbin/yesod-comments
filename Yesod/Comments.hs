@@ -53,9 +53,10 @@ import qualified Data.ByteString.Lazy.Char8 as L
 
 -- $templates
 --
--- In "Comments.Templates" you'll find prebuilt templates defining the
--- layout of the comments section.  --
--- You could also define your own; see "Comments.Core" for the
+-- In "Yesod.Comments.Templates" you'll find prebuilt templates defining 
+-- the layout of the comments section.
+-- 
+-- You could also define your own; see "Yesod.Comments.Core" for the
 -- 'CommentsTemplate' type synonym, it's essentially 
 --
 -- > :: [Comment] -> Widget ()
@@ -63,15 +64,14 @@ import qualified Data.ByteString.Lazy.Char8 as L
 
 -- $storage
 --
--- In "Comments.Storage" you'll find some prebuilt backends for use in
--- persisting the comments. Again, you could roll you're own by
+-- In "Yesod.Comments.Storage" you'll find some prebuilt backends for 
+-- use in persisting the comments. Again, you could roll you're own by 
 -- defining a function of type 'CommentStorage' by specifying how to
 -- read comments by 'ThreadId', how to store a comment, and how to
 -- delete a comment.
 --
 
--- | Sub-template for the input form itself; todo: use custom input
---   fields for validation/sizing
+-- | Sub-template for the input form itself
 commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentForm = do
     (user   , fiUser   ) <- stringField   "name:"    Nothing
@@ -120,7 +120,7 @@ commentForm = do
     where
         clazz fi = string $ if fiRequired fi then "required" else "optional"
 
--- | Cleanse form input and create a comment type to be stored
+-- | Cleanse form input and create a 'Comment' to be stored
 commentFromForm :: ThreadId 
                 -> CommentId 
                 -> CommentForm 
@@ -158,7 +158,7 @@ commentFromForm tId cId cf = do
 liftT :: (String -> String) -> Textarea -> Textarea
 liftT f = Textarea . f . unTextarea
 
--- | lift a String funciton into Html
+-- | lift a String function into Html
 liftH :: (String -> String) -> Html -> Html
 liftH f = preEscapedString . f . L.unpack . renderHtml
 
