@@ -15,7 +15,7 @@ library
   exposed-modules: Yesod.Comments, Yesod.Comments.Templates, Yesod.Comments.Storage, Yesod.Comments.Core, Yesod.Comments.Fields
   
   -- Packages needed in order to build this package.
-  build-depends: base, time, old-locale, bytestring, yesod, wai, persistent, xss-sanitize, hamlet, wai
+  build-depends: base, time, old-locale, bytestring, yesod, yesod-markdown, wai, persistent, xss-sanitize, hamlet, wai
   
   ghc-options: -Wall
   

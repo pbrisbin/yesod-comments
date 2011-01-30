@@ -42,10 +42,7 @@ import Control.Monad         (when)
 import Data.Time.Clock       (getCurrentTime)
 import Data.Maybe            (isNothing, fromJust)
 import Network.Wai           (remoteHost)
-import Text.Hamlet           (toHtml)
-import Text.HTML.SanitizeXSS (sanitizeXSS)
 import qualified Data.ByteString.Char8 as B
-import qualified Data.ByteString.Lazy.Char8 as L
 
 -- $usage
 --
@@ -59,8 +56,6 @@ commentFromForm tId cId cf = do
     timeNow <- liftIO getCurrentTime
     ip      <- return . B.unpack . remoteHost =<< waiRequest
     return $ Comment tId cId timeNow ip (formUser cf) (formComment cf)
-    where 
-        unMarkdown (Markdown s) = s
 
 -- | Sub-template for the input form itself
 commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
@@ -78,7 +73,7 @@ commentForm = do
     |])
     where
         fieldRow fi = [$hamlet|
-            %tr
+            %tr.$clazz.fi$
                 %th
                     %label!for=$fiIdent.fi$ $fiLabel.fi$
                     .tooltip $fiTooltip.fi$
