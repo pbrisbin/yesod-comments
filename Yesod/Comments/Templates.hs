@@ -32,13 +32,25 @@ import Yesod.Comments.Core
 defaultTemplate :: CommentsTemplate
 defaultTemplate comments form enctype = do
     formHamlet <- liftHandler $ hamletFromWidget form
+    -- make the input box a bit bigger
+    addCassius [$cassius|
+        .comment_input th
+            text-align:     left
+            vertical-align: top
+
+        .comment_input textarea
+            height: 10ex
+            width:  50ex
+        |]
+        
     -- show the input form
     addHamlet [$hamlet|
         %h4 Add a comment:
-        %form!enctype=$enctype$!method="post"
-            ^formHamlet^
-        %p 
-            %em comments are parsed as pandoc-style markdown
+        .comment_input
+            %form!enctype=$enctype$!method="post"
+                ^formHamlet^
+            %p 
+                %em comments are parsed as pandoc-style markdown
 
         %h4 Showing $string.show.length.comments$ comments:
         |]

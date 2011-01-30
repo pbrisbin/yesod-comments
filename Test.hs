@@ -32,18 +32,21 @@ instance YesodPersist CommentTest where
 withConnectionPool :: MonadInvertIO m => (ConnectionPool -> m a) -> m a
 withConnectionPool = withSqlitePool "comments.db3" 10
 
--- define my configuration
-myConf = CommentConf defaultTemplate persistentDB ""
+-- | Define a configuration
+myConf = CommentConf 
+    { template  = defaultTemplate 
+    , storage   = persistentDB
+    , blacklist = ""
+    }
 
 getRootR :: Handler RepHtml
 getRootR = defaultLayout $ do
-    setTitle  $ string "test homepage"
+    setTitle  $ string "comments test page"
     addHamlet [$hamlet|
         %h1 Test Page
-        %p Welcome to my comments test page.
+        %p  Welcome to my comments test page.
         %h3 Comments
         |]
-    -- add the comments
     addComments myConf "test"
 
 postRootR :: Handler RepHtml
