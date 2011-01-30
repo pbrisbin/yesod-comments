@@ -136,8 +136,13 @@ addComments conf thread = do
         FormFailure _  -> return ()
         FormSuccess cf -> liftHandler $ do
             -- store the entered comment and redirect
-            commentFromForm thread cId cf >>= storeComment (storage conf)
-            setMessage $ [$hamlet| %em comment added |]
+            comment <- commentFromForm thread cId cf
+            matched <- applyFilters (filters conf) comment
+            if matched 
+                then setMessage $ [$hamlet| %em comment dropped, matched filters. |]
+                else do
+                    storeComment (storage conf) comment
+                    setMessage $ [$hamlet| %em comment added |]
             redirect RedirectTemporary r
 
     -- add the form/exisint comments hamlet
