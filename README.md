@@ -7,20 +7,26 @@ flexibility and simplicity.
 
 ### Usage
 
-See ./Test.hs or read the 
-[haddocks](http://pbrisbin.com/haskell/docs/html/yesod-comments/)
+See ./Test.hs or read the [haddocks][].
 
 ### Try it
 
 Assuming you've got the required dependencies you can run the Test app 
-directly. If you don't, but are willing to install them, just `cabal 
-install` from within the yesod-comments directory.
+directly:
 
     git clone git://github.com/pbrisbin/yesod-comments.git
     cd yesod-comments
     runhaskell Test.hs
     $BROWSER http://localhost:3000
 
+Note:
+
+This module expects my forked version of yesod-markdown. Either install 
+it, or uncomment the lines regarding `markdownField` as noted in 
+Yesod/Comments.hs.
+
 Here's what it looks like on my server:
 
 ![Yesod MPC Shot](http://pbrisbin.com/static/fileshare/yesod_comments.png)
+
+[haddocks]: http://pbrisbin.com/haskell/docs/html/yesod-comments "yesod comments haddocks"
