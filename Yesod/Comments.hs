@@ -89,25 +89,27 @@ commentForm = do
         clazz fi = string $ if fiRequired fi then "required" else "optional"
 
 -- | Unexported code from Yesod.Markdown {{{
-markdownField :: (IsForm f, FormType f ~ Markdown)
-              => FormFieldSettings -> Maybe Markdown -> f
-markdownField = requiredFieldHelper markdownFieldProfile
-
-markdownFieldProfile :: FieldProfile sub y Markdown
-markdownFieldProfile = FieldProfile
-    { fpParse  = Right . Markdown . unlines . lines'
-    , fpRender = \(Markdown m) -> m
-    , fpWidget = \theId name val _isReq -> addHamlet [$hamlet|
-        %textarea.markdown#$theId$!name=$name$ $val$
-        |]
-    }
-
-lines' :: String -> [String]
-lines' = map go . lines
-    where
-        go []        = []
-        go ('\r':[]) = []
-        go (x:xs)    = x : go xs
+--   this is now in my fork on github, install it or uncomment this to 
+--   use this package
+--markdownField :: (IsForm f, FormType f ~ Markdown)
+--              => FormFieldSettings -> Maybe Markdown -> f
+--markdownField = requiredFieldHelper markdownFieldProfile
+--
+--markdownFieldProfile :: FieldProfile sub y Markdown
+--markdownFieldProfile = FieldProfile
+--    { fpParse  = Right . Markdown . unlines . lines'
+--    , fpRender = \(Markdown m) -> m
+--    , fpWidget = \theId name val _isReq -> addHamlet [$hamlet|
+--        %textarea.markdown#$theId$!name=$name$ $val$
+--        |]
+--    }
+--
+--lines' :: String -> [String]
+--lines' = map go . lines
+--    where
+--        go []        = []
+--        go ('\r':[]) = []
+--        go (x:xs)    = x : go xs
 -- }}}
 
 -- | Add the comment section as a widget
