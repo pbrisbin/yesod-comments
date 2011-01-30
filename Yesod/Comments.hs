@@ -91,7 +91,7 @@ commentForm = do
 
         clazz fi = string $ if fiRequired fi then "required" else "optional"
 
--- | Unexported code from Yesod.Markdown {{{
+-- Unexported code from Yesod.Markdown {{{
 --   this is now in my fork on github, install it or uncomment this to 
 --   use this package
 --markdownField :: (IsForm f, FormType f ~ Markdown)
