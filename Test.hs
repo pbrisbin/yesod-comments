@@ -17,7 +17,7 @@ import Database.Persist.GenericSql
 
 data CommentTest = CommentTest { connPool :: ConnectionPool }
 type Handler = GHandler CommentTest CommentTest
-type Widget  = GWidget CommentTest CommentTest
+type Widget  = GWidget  CommentTest CommentTest
 
 -- | Make sure you allow the POST route on any routes where comments
 --   will be entered. It can just link to GET (see 'postRootR')
@@ -32,28 +32,19 @@ instance YesodPersist CommentTest where
 withConnectionPool :: MonadInvertIO m => (ConnectionPool -> m a) -> m a
 withConnectionPool = withSqlitePool "comments.db3" 10
 
-getRootR :: Handler RepHtml
-getRootR = do
-    -- | Fetch the Hamlet for this page's comments section:
-    pageComments <- runCommentsForm 
-        defaultTemplate -- ^ The template to use (see "Yesod.Comments.Templates")
-        persistentDB    -- ^ The storage backed (see "Yesod.Comments.Storage")
-        "testpage"      -- ^ The 'ThreadId' of this page
-        RootR           -- ^ The 'Route' to redirect to after a POST
+-- define my configuration
+myConf = CommentConf defaultTemplate persistentDB ""
 
-    -- | and just ^embed^ it in your template where desired.
-    defaultLayout $ do
-        setTitle  $ string "test homepage"
-        addHamlet $
-            [$hamlet|
-                #header
-                    %h1 Test Page
-                    %hr
-                #body
-                    %p Welcome to my comments test page.
-                    %h3 Comments
-                    ^pageComments^
-            |]
+getRootR :: Handler RepHtml
+getRootR = defaultLayout $ do
+    setTitle  $ string "test homepage"
+    addHamlet [$hamlet|
+        %h1 Test Page
+        %p Welcome to my comments test page.
+        %h3 Comments
+        |]
+    -- add the comments
+    addComments myConf "test"
 
 postRootR :: Handler RepHtml
 postRootR = getRootR

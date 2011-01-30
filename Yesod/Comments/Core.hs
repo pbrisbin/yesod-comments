@@ -19,9 +19,11 @@ module Yesod.Comments.Core
     , CommentForm(..)
     , CommentStorage(..)
     , CommentsTemplate
+    , CommentConf(..)
     ) where
 
 import Yesod
+import Yesod.Markdown
 import Data.Time.Clock (UTCTime)
 
 -- | A unique thread identifier, probably the post slug or similar
@@ -41,15 +43,14 @@ data Comment = Comment
     , timeStamp :: UTCTime
     , ipAddress :: String
     , userName  :: String
-    , content   :: Html
+    , content   :: Markdown
     } deriving Show
 
 -- | The form data type, this is used to gather the comment from the
 --   user and is handed off to commentFromForm just before storeComment
 data CommentForm = CommentForm
     { formUser    :: String
-    , formComment :: Textarea
-    , formIsHtml  :: Bool
+    , formComment :: Markdown
     }
 
 -- | A data type to represent your backend. Provides total flexibility
@@ -59,4 +60,11 @@ data CommentStorage s m = CommentStorage
     { storeComment  :: Comment  -> GHandler s m ()
     , loadComments  :: ThreadId -> GHandler s m [Comment]
     , deleteComment :: ThreadId -> CommentId -> GHandler s m ()
+    }
+
+-- | The main configuration
+data CommentConf s m = CommentConf
+    { template  :: CommentsTemplate
+    , storage   :: CommentStorage s m
+    , blacklist :: FilePath
     }

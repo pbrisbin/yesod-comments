@@ -22,6 +22,7 @@ module Yesod.Comments.Storage
     ) where
 
 import Yesod
+import Yesod.Markdown
 import Yesod.Comments.Core
 
 import Data.Time.Clock  (UTCTime)
@@ -31,10 +32,6 @@ import Database.Persist.TH         (share2)
 import Database.Persist.GenericSql (mkMigrate)
 
 import qualified Data.ByteString.Lazy.Char8 as L
-
--- | some utilities
-htmlToString :: Html -> String
-htmlToString = L.unpack . renderHtml
 
 -- | For use during testing, always loads no comments and prints the
 --   comment to stderr as the /store/ action
@@ -66,8 +63,10 @@ toSqlComment comment = SqlComment
     , sqlCommentTimeStamp = timeStamp comment
     , sqlCommentIpAddress = ipAddress comment
     , sqlCommentUserName  = userName  comment
-    , sqlCommentContent   = htmlToString $ content comment
+    , sqlCommentContent   = unMarkdown $ content comment
     }
+    where
+        unMarkdown (Markdown s) = s
 
 -- | Maybe read a 'Comment' back from a selected SqlComment
 fromSqlComment :: SqlComment -> Comment
@@ -77,7 +76,7 @@ fromSqlComment sqlComment = Comment
     , timeStamp = sqlCommentTimeStamp sqlComment
     , ipAddress = sqlCommentIpAddress sqlComment
     , userName  = sqlCommentUserName  sqlComment
-    , content   = preEscapedString $ sqlCommentContent sqlComment
+    , content   = Markdown $ sqlCommentContent sqlComment
     }
 
 -- | If your app is an instance of YesodPersist, you can use this
@@ -90,10 +89,8 @@ persistentDB = CommentStorage
     { storeComment = \comment -> do
         runDB $ insert $ toSqlComment comment
         return ()
-
     , loadComments = \tid -> do
         results <- runDB $ selectList [SqlCommentThreadIdEq tid] [SqlCommentCommentIdAsc] 0 0
         return $ map (fromSqlComment . snd) results
-
     , deleteComment = \tid cid -> runDB $ deleteBy $ UniqueSqlComment tid cid
     }
