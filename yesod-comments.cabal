@@ -12,10 +12,23 @@ cabal-version:       >=1.2
 
 library
   -- Modules exported by the library.
-  exposed-modules: Yesod.Comments, Yesod.Comments.Templates, Yesod.Comments.Storage, Yesod.Comments.Core, Yesod.Comments.Fields
+  exposed-modules: Yesod.Comments
+                 , Yesod.Comments.Core
+                 , Yesod.Comments.Storage
+                 , Yesod.Comments.Templates
   
   -- Packages needed in order to build this package.
-  build-depends: base, time, old-locale, bytestring, yesod, yesod-markdown, wai, persistent, xss-sanitize, hamlet, wai
+  build-depends: base
+               , time
+               , old-locale
+               , bytestring
+               , yesod
+               , yesod-markdown == 0.2.2.*
+               , wai
+               , persistent
+               , xss-sanitize
+               , hamlet
+               , wai
   
   ghc-options: -Wall
   
