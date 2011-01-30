@@ -23,16 +23,19 @@ module Yesod.Comments (
     -- * Usage
     -- $usage
       addComments
+    , module Yesod.Comments.Core
     -- * Templates
     , module Yesod.Comments.Templates
     -- * Storage
     , module Yesod.Comments.Storage
-    , module Yesod.Comments.Core
+    -- * Filters
+    , module Yesod.Comments.Filters
     ) where
 
+import Yesod.Comments.Core
 import Yesod.Comments.Templates
 import Yesod.Comments.Storage
-import Yesod.Comments.Core
+import Yesod.Comments.Filters
 
 import Yesod
 import Yesod.Markdown

@@ -34,9 +34,9 @@ withConnectionPool = withSqlitePool "comments.db3" 10
 
 -- | Define a configuration
 myConf = CommentConf 
-    { template  = defaultTemplate 
-    , storage   = persistentDB
-    , blacklist = ""
+    { template = defaultTemplate 
+    , storage  = persistentDB
+    , filters  = [blacklistFile "blacklist.txt"]
     }
 
 getRootR :: Handler RepHtml

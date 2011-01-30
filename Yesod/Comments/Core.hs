@@ -64,7 +64,7 @@ data CommentStorage s m = CommentStorage
 
 -- | The main configuration
 data CommentConf s m = CommentConf
-    { template  :: CommentsTemplate
-    , storage   :: CommentStorage s m
-    , blacklist :: FilePath
+    { template :: CommentsTemplate
+    , storage  :: CommentStorage s m
+    , filters  :: [(Comment -> GHandler s m Bool)]
     }
