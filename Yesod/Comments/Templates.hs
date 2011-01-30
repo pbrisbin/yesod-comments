@@ -86,6 +86,6 @@ hamletFromWidget widget = return . pageBody =<< widgetToPageContent widget
 markdownToHtml :: Yesod m => Markdown -> GHandler s m Html
 markdownToHtml = (writePandoc yesodDefaultWriterOptions <$>) 
                . localLinks 
-               . parseMarkdown yesodDefaultParserStateTrusted
+               . parseMarkdown yesodDefaultParserState
 
 -- todo: humanReadableDiffTime
