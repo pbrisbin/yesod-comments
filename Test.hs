@@ -42,6 +42,12 @@ myConf = CommentConf
 getRootR :: Handler RepHtml
 getRootR = defaultLayout $ do
     setTitle  $ string "comments test page"
+
+    -- i hope he doesn't mind...
+    addHamletHead [$hamlet| 
+        %link!href="http://johnmacfarlane.net/css/hk-pyg.css"!rel="stylesheet"!media="screen"!type="text/css"
+        |]
+
     addHamlet [$hamlet|
         %h1 Test Page
         %p  Welcome to my comments test page.
