@@ -10,6 +10,7 @@ module Test where
 
 import Yesod.Comments
 import Yesod.Comments.Storage
+import Yesod.Comments.Filters (blacklistFile)
 
 import Yesod
 import Network.Wai.Handler.SimpleServer (run)
@@ -34,10 +35,11 @@ withConnectionPool :: MonadInvertIO m => (ConnectionPool -> m a) -> m a
 withConnectionPool = withSqlitePool "comments.db3" 10
 
 instance YesodComments CommentTest where
-    getComment   = getCommentPersist
-    storeComment = storeCommentPersist
-    deleteComment = deleteCommentPersist
-    loadComments  = loadCommentsPersist
+    getComment     = getCommentPersist
+    storeComment   = storeCommentPersist
+    deleteComment  = deleteCommentPersist
+    loadComments   = loadCommentsPersist
+    commentFilters = [blacklistFile "blacklist.txt"]
 
 getRootR :: Handler RepHtml
 getRootR = defaultLayout $ do
