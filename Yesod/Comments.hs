@@ -19,11 +19,13 @@ module Yesod.Comments
 
 import Yesod
 import Yesod.Comments.Core
+import Yesod.Comments.Filters (applyFilters)
+
 import Control.Monad    (when)
+import Data.Maybe       (isNothing, fromJust)
 import Data.Time.Clock  (getCurrentTime)
 import Data.Time.Format (formatTime)
 import System.Locale    (defaultTimeLocale)
-import Data.Maybe       (isNothing, fromJust)
 
 -- | Add an overall comments section as a widget
 addComments :: YesodComments m 
@@ -45,9 +47,12 @@ addComments tid = do
         FormFailure _  -> return ()
         FormSuccess cf -> liftHandler $ do
             comment <- commentFromForm tid cId cf
-            -- todo: apply filters
-            storeComment comment
-            setMessage $ [$hamlet| %em comment added |]
+            matches <- applyFilters commentFilters comment
+            if matches
+                then setMessage $ string "comment dropped. matched filters."
+                else do
+                    storeComment comment
+                    setMessage $ string "comment added."
             redirect RedirectTemporary r
 
     -- make the input box a bit bigger
