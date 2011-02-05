@@ -7,7 +7,7 @@ flexibility and simplicity.
 
 Note:
 
-This module expects my fork of yesod-markdown[repo][].
+This module expects my fork of [yesod-markdown][repo].
 
 ### Usage
 
