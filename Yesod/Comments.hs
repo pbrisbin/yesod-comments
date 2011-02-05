@@ -21,8 +21,6 @@ import Yesod
 import Yesod.Comments.Core
 import Yesod.Comments.Filters (applyFilters)
 
-import Control.Monad    (when)
-import Data.Maybe       (isNothing, fromJust)
 import Data.Time.Clock  (getCurrentTime)
 import Data.Time.Format (formatTime)
 import System.Locale    (defaultTimeLocale)
@@ -32,13 +30,8 @@ addComments :: YesodComments m
             => ThreadId -- ^ the thread you're adding comments to
             -> GWidget s m ()
 addComments tid = do
-    tm <- liftHandler getRouteToMaster
-    mr <- liftHandler getCurrentRoute
-    when (isNothing mr) (liftHandler notFound)
-    let r = tm $ fromJust mr
-
     comments <- liftHandler $ loadComments tid
-    cId      <- liftHandler $ getNextCommentId comments
+    cid      <- liftHandler $ getNextCommentId comments
     
     -- run the form
     ((res, form), enctype) <- liftHandler $ runFormMonadPost commentForm
@@ -46,14 +39,14 @@ addComments tid = do
         FormMissing    -> return ()
         FormFailure _  -> return ()
         FormSuccess cf -> liftHandler $ do
-            comment <- commentFromForm tid cId cf
+            comment <- commentFromForm tid cid cf
             matches <- applyFilters commentFilters comment
             if matches
                 then setMessage $ string "comment dropped. matched filters."
                 else do
                     storeComment comment
                     setMessage $ string "comment added."
-            redirect RedirectTemporary r
+            redirectCurrentRoute
 
     -- make the input box a bit bigger
     addCassius [$cassius|
@@ -82,6 +75,15 @@ addComments tid = do
                 ^showComment.comment^
         |]
     where
+        -- | Redirect back to the current route after a POST request
+        redirectCurrentRoute :: Yesod m => GHandler s m ()
+        redirectCurrentRoute = do
+            tm <- getRouteToMaster
+            mr <- getCurrentRoute
+            case mr of
+                Just r  -> redirect RedirectTemporary $ tm r
+                Nothing -> notFound
+            
         -- | Show a single comment, provides numbered anchors
         showComment :: Yesod m => Comment -> GWidget s m ()
         showComment comment =  do
