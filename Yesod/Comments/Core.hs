@@ -1,4 +1,5 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE OverloadedStrings #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments.Core
@@ -9,34 +10,36 @@
 -- Stability   :  unstable
 -- Portability :  unportable
 --
--- Core comment data types.
---
 -------------------------------------------------------------------------------
-module Yesod.Comments.Core 
-    ( Comment(..)
-    , ThreadId
-    , CommentId
-    , CommentForm(..)
-    , CommentStorage(..)
-    , CommentsTemplate
-    , CommentConf(..)
-    ) where
+module Yesod.Comments.Core where
 
 import Yesod
-import Yesod.Markdown
-import Data.Time.Clock (UTCTime)
+import Yesod.Markdown -- my fork, <https://github.com/pbrisbin/yesod-markdown> required
+import Yesod.Form.Core
+import Control.Applicative ((<$>), (<*>))
+import Data.Time.Clock     (UTCTime, getCurrentTime)
+import Network.Wai         (remoteHost)
+import qualified Data.ByteString.Char8 as B
 
--- | A unique thread identifier, probably the post slug or similar
-type ThreadId = String
-
--- | A unique identifier for a comment within a thread, usually an
---   incrementing number that the user need not deal with
+type ThreadId  = String
 type CommentId = Int
 
--- | A convenience synonym
-type CommentsTemplate = (Yesod m) => [Comment] -> GWidget s m () -> Enctype -> GWidget s m ()
+class Yesod m => YesodComments m where
+    -- Data base actions
+    getComment     :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+    storeComment   :: Comment -> GHandler s m ()
+    deleteComment  :: Comment -> GHandler s m ()
 
--- | The actual comment data type.
+    -- Loading onto pages
+    loadComments     :: ThreadId -> GHandler s m [Comment]
+    getNextCommentId :: [Comment] -> GHandler s m CommentId
+    getNextCommentId [] = return 1
+    getNextCommentId cs = return $ maximum (map commentId cs) + 1
+
+    --- other
+    commentFilters   :: [(Comment -> GHandler s m Bool)]
+    commentFilters   = [const $ return False]
+    
 data Comment = Comment
     { threadId  :: ThreadId
     , commentId :: CommentId
@@ -44,27 +47,60 @@ data Comment = Comment
     , ipAddress :: String
     , userName  :: String
     , content   :: Markdown
-    } deriving Show
+    } deriving (Eq,Show)
 
--- | The form data type, this is used to gather the comment from the
---   user and is handed off to commentFromForm just before storeComment
 data CommentForm = CommentForm
     { formUser    :: String
     , formComment :: Markdown
-    }
+    } deriving Show
 
--- | A data type to represent your backend. Provides total flexibility
---   by abstracting the actual storage away behind the three required
---   functions. See 'Comments.Storage' for example backends
-data CommentStorage s m = CommentStorage
-    { storeComment  :: Comment  -> GHandler s m ()
-    , loadComments  :: ThreadId -> GHandler s m [Comment]
-    , deleteComment :: ThreadId -> CommentId -> GHandler s m ()
-    }
+-- | Render from markdown, yesod-style
+markdownToHtml :: Yesod m => Markdown -> GHandler s m Html
+markdownToHtml = (writePandoc yesodDefaultWriterOptions <$>) 
+               . localLinks 
+               . parseMarkdown yesodDefaultParserState
 
--- | The main configuration
-data CommentConf s m = CommentConf
-    { template :: CommentsTemplate
-    , storage  :: CommentStorage s m
-    , filters  :: [(Comment -> GHandler s m Bool)]
-    }
+-- | The comment form itself
+commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentForm = do
+    (user   , fiUser   ) <- stringField   "name:"    Nothing
+    (comment, fiComment) <- markdownField "comment:" Nothing
+    return (CommentForm <$> user <*> comment, [$hamlet|
+    %table
+        ^fieldRow.fiUser^        
+        ^fieldRow.fiComment^
+        %tr
+            %td &nbsp;
+            %td!colspan="2"
+                %input!type="submit"!value="Add comment"
+    |])
+    where
+        fieldRow fi = [$hamlet|
+            %tr.$clazz.fi$
+                %th
+                    %label!for=$fiIdent.fi$ $fiLabel.fi$
+                    .tooltip $fiTooltip.fi$
+                %td
+                    ^fiInput.fi^
+                %td
+                    $maybe fiErrors.fi error
+                        $error$
+                    $nothing
+                        &nbsp;
+            |]
+
+        clazz fi = string $ if fiRequired fi then "required" else "optional"
+
+-- | Cleanse form input and create a 'Comment' to be stored
+commentFromForm :: ThreadId -> CommentId -> CommentForm -> GHandler s m Comment
+commentFromForm tid cid cf = do
+    now <- liftIO getCurrentTime
+    ip  <- return . B.unpack . remoteHost =<< waiRequest
+    return Comment 
+        { threadId  = tid 
+        , commentId = cid 
+        , timeStamp = now
+        , ipAddress = ip
+        , userName  = formUser cf
+        , content   = formComment cf
+        }

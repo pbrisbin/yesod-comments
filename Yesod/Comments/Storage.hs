@@ -12,35 +12,35 @@
 -- Stability   :  unstable
 -- Portability :  unportable
 --
--- Some pre-built backend definitions for use with runCommentsForm.
+-- Some pre-built function definitions for storing and loading comments.
 --
 -------------------------------------------------------------------------------
 module Yesod.Comments.Storage
-    ( testDB
-    , persistentDB
+    ( 
+    -- * Persist
+    -- $persist
+      getCommentPersist
+    , storeCommentPersist
+    , deleteCommentPersist
+    , loadCommentsPersist
     , migrateComments
+    -- * TODO
+    -- Add more
     ) where
 
 import Yesod
-import Yesod.Markdown
-import Yesod.Comments.Core
-
-import Data.Time.Clock  (UTCTime)
-import System.IO        (hPutStrLn, stderr)
-
+import Yesod.Markdown      (Markdown(..))
+import Yesod.Comments.Core (Comment(..), ThreadId, CommentId)
+import Data.Time.Clock     (UTCTime)
+import System.IO           (hPutStrLn, stderr)
 import Database.Persist.TH         (share2)
 import Database.Persist.GenericSql (mkMigrate)
 
-import qualified Data.ByteString.Lazy.Char8 as L
-
--- | For use during testing, always loads no comments and prints the
---   comment to stderr as the /store/ action
-testDB :: CommentStorage s m
-testDB = CommentStorage
-    { storeComment  = liftIO . hPutStrLn stderr . show
-    , loadComments  = \_   -> return []
-    , deleteComment = \_ _ -> return ()
-    }
+-- $yesodpersist
+--
+-- Use these functions to store your comments in an instance of 
+-- YesodPersist
+--
 
 -- | Create the required types and migration function for use in a
 --   general yesod app
@@ -55,7 +55,7 @@ SqlComment
     UniqueSqlComment threadId commentId
 |]
 
--- | Make a SqlComment out of a 'Comment' for passing off to insert
+-- | Make a 'SqlComment' out of a 'Comment' for passing off to insert
 toSqlComment :: Comment -> SqlComment
 toSqlComment comment = SqlComment
     { sqlCommentThreadId  = threadId  comment
@@ -68,7 +68,7 @@ toSqlComment comment = SqlComment
     where
         unMarkdown (Markdown s) = s
 
--- | Maybe read a 'Comment' back from a selected SqlComment
+-- | Maybe read a 'Comment' back from a selected 'SqlComment'
 fromSqlComment :: SqlComment -> Comment
 fromSqlComment sqlComment = Comment
     { threadId  = sqlCommentThreadId  sqlComment
@@ -79,18 +79,14 @@ fromSqlComment sqlComment = Comment
     , content   = Markdown $ sqlCommentContent sqlComment
     }
 
--- | If your app is an instance of YesodPersist, you can use this
---   backend to store comments in your database without any further
---   changes to your app.
-persistentDB :: (YesodPersist m, 
-                 PersistBackend (YesodDB m (GHandler s m))) 
-             => CommentStorage s m
-persistentDB = CommentStorage
-    { storeComment = \comment -> do
-        runDB $ insert $ toSqlComment comment
-        return ()
-    , loadComments = \tid -> do
-        results <- runDB $ selectList [SqlCommentThreadIdEq tid] [SqlCommentCommentIdAsc] 0 0
-        return $ map (fromSqlComment . snd) results
-    , deleteComment = \tid cid -> runDB $ deleteBy $ UniqueSqlComment tid cid
-    }
+getCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GHandler s m))) => ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+getCommentPersist tid cid = return . fmap (fromSqlComment . snd) =<< runDB (getBy $ UniqueSqlComment tid cid)
+
+storeCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GHandler s m))) => Comment -> GHandler s m ()
+storeCommentPersist c = return . const () =<< runDB (insert $ toSqlComment c)
+
+deleteCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GHandler s m))) => Comment -> GHandler s m ()
+deleteCommentPersist c = return . const () =<< runDB (deleteBy $ UniqueSqlComment (threadId c) (commentId c))
+
+loadCommentsPersist :: (YesodPersist m, PersistBackend (YesodDB m (GHandler s m))) => ThreadId -> GHandler s m [Comment]
+loadCommentsPersist tid = return . fmap (fromSqlComment . snd) =<< runDB (selectList [SqlCommentThreadIdEq tid] [SqlCommentCommentIdAsc] 0 0)

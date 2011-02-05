@@ -10,6 +10,7 @@
 -------------------------------------------------------------------------------
 module Yesod.Comments.Filters
     ( applyFilters
+    -- * Example filters
     , blacklistFile
     ) where
 

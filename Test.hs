@@ -9,6 +9,7 @@
 module Test where
 
 import Yesod.Comments
+import Yesod.Comments.Storage
 
 import Yesod
 import Network.Wai.Handler.SimpleServer (run)
@@ -19,9 +20,9 @@ data CommentTest = CommentTest { connPool :: ConnectionPool }
 type Handler = GHandler CommentTest CommentTest
 type Widget  = GWidget  CommentTest CommentTest
 
--- | Make sure you allow the POST route on any routes where comments
---   will be entered. It can just link to GET (see 'postRootR')
-mkYesod "CommentTest" [$parseRoutes| / RootR GET POST |]
+mkYesod "CommentTest" [$parseRoutes| 
+    / RootR GET POST 
+    |]
 
 instance Yesod CommentTest where approot _ = ""
 
@@ -32,12 +33,11 @@ instance YesodPersist CommentTest where
 withConnectionPool :: MonadInvertIO m => (ConnectionPool -> m a) -> m a
 withConnectionPool = withSqlitePool "comments.db3" 10
 
--- | Define a configuration
-myConf = CommentConf 
-    { template = defaultTemplate 
-    , storage  = persistentDB
-    , filters  = [blacklistFile "blacklist.txt"]
-    }
+instance YesodComments CommentTest where
+    getComment   = getCommentPersist
+    storeComment = storeCommentPersist
+    deleteComment = deleteCommentPersist
+    loadComments  = loadCommentsPersist
 
 getRootR :: Handler RepHtml
 getRootR = defaultLayout $ do
@@ -53,7 +53,7 @@ getRootR = defaultLayout $ do
         %p  Welcome to my comments test page.
         %h3 Comments
         |]
-    addComments myConf "test"
+    addComments "test"
 
 postRootR :: Handler RepHtml
 postRootR = getRootR
