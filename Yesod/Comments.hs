@@ -21,7 +21,6 @@ import Yesod
 import Yesod.Comments.Core
 import Yesod.Comments.Filters (applyFilters)
 
-import Data.Time.Clock  (getCurrentTime)
 import Data.Time.Format (formatTime)
 import System.Locale    (defaultTimeLocale)
 
@@ -50,29 +49,30 @@ addComments tid = do
 
     -- make the input box a bit bigger
     addCassius [$cassius|
-        .comment_input th
+        .yesod_comment_input th
             text-align:     left
             vertical-align: top
 
-        .comment_input textarea
+        .yesod_comment_input textarea
             height: 10ex
             width:  50ex
         |]
         
     -- show the input form
     [$hamlet|
-        %h4 Add a comment:
-        .comment_input
-            %form!enctype=$enctype$!method="post"
-                ^form^
-            %p 
-                %em comments are parsed as pandoc-style markdown
+        .yesod_comments
+            %h4 Add a comment:
+            .yesod_comment_input
+                %form!enctype=$enctype$!method="post"
+                    ^form^
+                %p 
+                    %em comments are parsed as pandoc-style markdown
 
-        %h4 Showing $string.show.length.comments$ comments:
-        
-        $forall comments comment
-            .comment
-                ^showComment.comment^
+            %h4 Showing $string.show.length.comments$ comments:
+            
+            $forall comments comment
+                .yesod_comment
+                    ^showComment.comment^
         |]
     where
         -- | Redirect back to the current route after a POST request
@@ -88,14 +88,16 @@ addComments tid = do
         showComment :: Yesod m => Comment -> GWidget s m ()
         showComment comment =  do
             commentContent <- liftHandler . markdownToHtml $ content comment
+            let num = show $ commentId comment
             addHamlet [$hamlet|
                 %p
                     comment 
-                    %a!href="#comment_$show.commentId.comment$"!id="#comment_$show.commentId.comment$" $show.commentId.comment$
+                    %span.yesod_comment_num
+                        %a!href="#comment_$num$"!id="#comment_$num$" $num$
                     : on 
-                    %strong $format.timeStamp.comment$
+                    %span.yesod_comment_time_stamp $format.timeStamp.comment$
                     , 
-                    %strong $userName.comment$
+                    %span.yesod_comment_username $userName.comment$
                     \ wrote:
 
                 %blockquote
