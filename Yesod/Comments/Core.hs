@@ -26,9 +26,9 @@ type CommentId = Int
 
 class Yesod m => YesodComments m where
     -- Data base actions
-    getComment     :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
-    storeComment   :: Comment -> GHandler s m ()
-    deleteComment  :: Comment -> GHandler s m ()
+    getComment    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+    storeComment  :: Comment -> GHandler s m ()
+    deleteComment :: Comment -> GHandler s m ()
 
     -- Loading onto pages
     loadComments     :: ThreadId -> GHandler s m [Comment]
@@ -37,8 +37,8 @@ class Yesod m => YesodComments m where
     getNextCommentId cs = return $ maximum (map commentId cs) + 1
 
     --- other
-    commentFilters   :: [(Comment -> GHandler s m Bool)]
-    commentFilters   = [const $ return False]
+    commentFilters :: [(Comment -> GHandler s m Bool)]
+    commentFilters = [const $ return False]
     
 data Comment = Comment
     { threadId  :: ThreadId
