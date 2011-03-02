@@ -1,6 +1,7 @@
-{-# LANGUAGE QuasiQuotes     #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies    #-}
+{-# LANGUAGE QuasiQuotes           #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 --
 -- pbrisbin 2010
 --
@@ -13,9 +14,10 @@ import Yesod.Comments.Storage
 import Yesod.Comments.Filters (blacklistFile)
 
 import Yesod
-import Network.Wai.Handler.SimpleServer (run)
+import Network.Wai.Handler.Warp (run)
 import Database.Persist.Sqlite
 import Database.Persist.GenericSql
+import Text.Blaze (toHtml)
 
 data CommentTest = CommentTest { connPool :: ConnectionPool }
 type Handler = GHandler CommentTest CommentTest
@@ -29,9 +31,9 @@ instance Yesod CommentTest where approot _ = ""
 
 instance YesodPersist CommentTest where
     type YesodDB CommentTest = SqlPersist
-    runDB db = fmap connPool getYesod >>= runSqlPool db
+    runDB db = liftIOHandler $ fmap connPool getYesod >>= runSqlPool db
 
-withConnectionPool :: MonadInvertIO m => (ConnectionPool -> m a) -> m a
+withConnectionPool :: MonadPeelIO m => (ConnectionPool -> m a) -> m a
 withConnectionPool = withSqlitePool "comments.db3" 10
 
 instance YesodComments CommentTest where
@@ -43,17 +45,17 @@ instance YesodComments CommentTest where
 
 getRootR :: Handler RepHtml
 getRootR = defaultLayout $ do
-    setTitle  $ string "comments test page"
+    setTitle  $ toHtml ("comments test page" :: String)
 
     -- i hope he doesn't mind...
-    addHamletHead [$hamlet| 
-        %link!href="http://johnmacfarlane.net/css/hk-pyg.css"!rel="stylesheet"!media="screen"!type="text/css"
+    addHamletHead [$hamlet|
+        <link href="http://johnmacfarlane.net/css/hk-pyg.css" rel="stylesheet" media="screen" type="text/css">
         |]
 
     addHamlet [$hamlet|
-        %h1 Test Page
-        %p  Welcome to my comments test page.
-        %h3 Comments
+        <h1>Test Page
+        <p>Welcome to my comments test page.
+        <h3>Comments
         |]
     addComments "test"
 

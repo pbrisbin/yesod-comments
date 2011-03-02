@@ -23,56 +23,55 @@ import Yesod.Comments.Filters (applyFilters)
 
 import Data.Time.Format (formatTime)
 import System.Locale    (defaultTimeLocale)
+import Text.Blaze       (toHtml)
 
 -- | Add an overall comments section as a widget
 addComments :: YesodComments m 
             => ThreadId -- ^ the thread you're adding comments to
             -> GWidget s m ()
 addComments tid = do
-    comments <- liftHandler $ loadComments tid
-    cid      <- liftHandler $ getNextCommentId comments
+    comments <- lift $ loadComments tid
+    cid      <- lift $ getNextCommentId comments
     
     -- run the form
-    ((res, form), enctype) <- liftHandler $ runFormMonadPost commentForm
+    ((res, form), enctype) <- lift $ runFormMonadPost commentForm
     case res of
         FormMissing    -> return ()
         FormFailure _  -> return ()
-        FormSuccess cf -> liftHandler $ do
+        FormSuccess cf -> lift $ do
             comment <- commentFromForm tid cid cf
             matches <- applyFilters commentFilters comment
             if matches
-                then setMessage $ string "comment dropped. matched filters."
+                then setMessage $ toHtml "comment dropped. matched filters."
                 else do
                     storeComment comment
-                    setMessage $ string "comment added."
+                    setMessage $ toHtml "comment added."
             redirectCurrentRoute
 
     -- make the input box a bit bigger
     addCassius [$cassius|
         .yesod_comment_input th
-            text-align:     left
+            text-align: left
             vertical-align: top
-
         .yesod_comment_input textarea
             height: 10ex
-            width:  50ex
+            width: 50ex
         |]
         
     -- show the input form
     [$hamlet|
-        .yesod_comments
-            %h4 Add a comment:
-            .yesod_comment_input
-                %form!enctype=$enctype$!method="post"
-                    ^form^
-                %p 
-                    %em comments are parsed as pandoc-style markdown
+        <div .yesod_comments>
+            <h4>Add a comment:
+            <div .yesod_comment_input>
+                <form enctype="#{enctype}" method="post">
+                    ^{form}
+                <p>
+                    <em>comments are parsed as pandoc-style markdown
 
-            %h4 Showing $string.show.length.comments$ comments:
-            
-            $forall comments comment
-                .yesod_comment
-                    ^showComment.comment^
+            <h4>Showing #{toHtml (show (length comments))} comments:
+            $forall comment <- comments
+                <div .yesod_comment>
+                    ^{showComment comment}
         |]
     where
         -- | Redirect back to the current route after a POST request
@@ -87,21 +86,21 @@ addComments tid = do
         -- | Show a single comment, provides numbered anchors
         showComment :: Yesod m => Comment -> GWidget s m ()
         showComment comment =  do
-            commentContent <- liftHandler . markdownToHtml $ content comment
+            commentContent <- lift . markdownToHtml $ content comment
             let num = show $ commentId comment
             addHamlet [$hamlet|
-                %p
+                <p>
                     comment 
-                    %span.yesod_comment_num
-                        %a!href="#comment_$num$"!id="#comment_$num$" $num$
+                    <span .yesod_comment_num>
+                        <a href="#comment_#{num}" id="#comment_#{num}">#{num}
                     : on 
-                    %span.yesod_comment_time_stamp $format.timeStamp.comment$
+                    <span .yesod_comment_time_stamp>#{format (timeStamp comment)}
                     , 
-                    %span.yesod_comment_username $userName.comment$
+                    <span .yesod_comment_username>#{userName comment}
                     \ wrote:
 
-                %blockquote
-                    $commentContent$
+                <blockquote>
+                    #{commentContent}
                 |]
             where
                 -- todo: humanReadableTimeDiff

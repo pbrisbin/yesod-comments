@@ -79,14 +79,14 @@ fromSqlComment sqlComment = Comment
     , content   = Markdown $ sqlCommentContent sqlComment
     }
 
-getCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GHandler s m))) => ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+getCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => ThreadId -> CommentId -> GHandler s m (Maybe Comment)
 getCommentPersist tid cid = return . fmap (fromSqlComment . snd) =<< runDB (getBy $ UniqueSqlComment tid cid)
 
-storeCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GHandler s m))) => Comment -> GHandler s m ()
+storeCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => Comment -> GHandler s m ()
 storeCommentPersist c = return . const () =<< runDB (insert $ toSqlComment c)
 
-deleteCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GHandler s m))) => Comment -> GHandler s m ()
+deleteCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => Comment -> GHandler s m ()
 deleteCommentPersist c = return . const () =<< runDB (deleteBy $ UniqueSqlComment (threadId c) (commentId c))
 
-loadCommentsPersist :: (YesodPersist m, PersistBackend (YesodDB m (GHandler s m))) => ThreadId -> GHandler s m [Comment]
+loadCommentsPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => ThreadId -> GHandler s m [Comment]
 loadCommentsPersist tid = return . fmap (fromSqlComment . snd) =<< runDB (selectList [SqlCommentThreadIdEq tid] [SqlCommentCommentIdAsc] 0 0)

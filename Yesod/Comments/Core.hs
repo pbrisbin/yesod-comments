@@ -19,7 +19,7 @@ import Yesod.Form.Core
 import Control.Applicative ((<$>), (<*>))
 import Data.Time.Clock     (UTCTime, getCurrentTime)
 import Network.Wai         (remoteHost)
-import qualified Data.ByteString.Char8 as B
+import Text.Blaze          (toHtml)
 
 type ThreadId  = String
 type CommentId = Int
@@ -66,36 +66,37 @@ commentForm = do
     (user   , fiUser   ) <- stringField   "name:"    Nothing
     (comment, fiComment) <- markdownField "comment:" Nothing
     return (CommentForm <$> user <*> comment, [$hamlet|
-    %table
-        ^fieldRow.fiUser^        
-        ^fieldRow.fiComment^
-        %tr
-            %td &nbsp;
-            %td!colspan="2"
-                %input!type="submit"!value="Add comment"
-    |])
+        <table>
+            ^{fieldRow fiUser}
+            ^{fieldRow fiComment}
+            <tr>
+                <td>&nbsp;
+                <td colspan="2">
+                <input type="submit" value="Add comment">
+        |])
     where
         fieldRow fi = [$hamlet|
-            %tr.$clazz.fi$
-                %th
-                    %label!for=$fiIdent.fi$ $fiLabel.fi$
-                    .tooltip $fiTooltip.fi$
-                %td
-                    ^fiInput.fi^
-                %td
-                    $maybe fiErrors.fi error
-                        $error$
+            <tr .#{toHtml (clazz fi)}>
+                <th>
+                    <label for="#{fiIdent fi}">#{fiLabel fi}
+                    <div .tooltip>#{fiTooltip fi}
+                <td>
+                    ^{fiInput fi}
+                <td>
+                    $maybe error <- fiErrors fi
+                        #{error}
                     $nothing
                         &nbsp;
             |]
 
-        clazz fi = string $ if fiRequired fi then "required" else "optional"
+
+        clazz fi = if fiRequired fi then "required" else "optional" :: String
 
 -- | Cleanse form input and create a 'Comment' to be stored
 commentFromForm :: ThreadId -> CommentId -> CommentForm -> GHandler s m Comment
 commentFromForm tid cid cf = do
     now <- liftIO getCurrentTime
-    ip  <- return . B.unpack . remoteHost =<< waiRequest
+    ip  <- return . show . remoteHost =<< waiRequest
     return Comment 
         { threadId  = tid 
         , commentId = cid 
