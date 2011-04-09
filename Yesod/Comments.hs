@@ -95,24 +95,15 @@ addComments tid = do
         showComment comment =  do
             commentContent   <- lift . markdownToHtml $ content comment
             commentTimestamp <- return . flip humanReadableTimeDiff (timeStamp comment) =<< liftIO getCurrentTime
-            let num = show $ commentId comment
+            let anchor = "#comment_" ++ show (commentId comment)
             addHamlet [hamlet|
                 <p>
-                    comment 
-                    <span .yesod_comment_num>
-                        <a href="#comment_#{num}" id="#comment_#{num}">#{num}
-                    : entered 
-                    <span .yesod_comment_time_stamp>#{commentTimestamp}
-                    , 
-                    <span .yesod_comment_username>#{userName comment}
-                    \ wrote:
+                    <a href="#{anchor}" id="#{anchor}">#{commentTimestamp}
+                    , #{userName comment} wrote:
 
                 <blockquote>
                     #{commentContent}
                 |]
-            where
-                -- todo: humanReadableTimeDiff
-                --format = formatTime defaultTimeLocale "%a, %b %d at %X"
 
 -- <https://github.com/snoyberg/haskellers/blob/master/Haskellers.hs>
 -- <https://github.com/snoyberg/haskellers/blob/master/LICENSE>
