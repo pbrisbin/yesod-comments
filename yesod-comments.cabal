@@ -15,6 +15,7 @@ library
   exposed-modules: Yesod.Comments
                  , Yesod.Comments.Core
                  , Yesod.Comments.Storage
+                 , Yesod.Comments.Filters
   
   -- Packages needed in order to build this package.
   build-depends: base
