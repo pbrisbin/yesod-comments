@@ -1,4 +1,5 @@
 {-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -44,7 +45,7 @@ import Database.Persist.GenericSql (mkMigrate)
 
 -- | Create the required types and migration function for use in a
 --   general yesod app
-share2 mkPersist (mkMigrate "migrateComments") [$persist|
+share2 mkPersist (mkMigrate "migrateComments") [persist|
 SqlComment
     threadId  String Eq
     commentId Int Eq Asc

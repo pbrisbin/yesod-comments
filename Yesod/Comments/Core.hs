@@ -65,7 +65,7 @@ commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentForm = do
     (user   , fiUser   ) <- stringField   "name:"    Nothing
     (comment, fiComment) <- markdownField "comment:" Nothing
-    return (CommentForm <$> user <*> comment, [$hamlet|
+    return (CommentForm <$> user <*> comment, [hamlet|
         <table>
             ^{fieldRow fiUser}
             ^{fieldRow fiComment}
@@ -75,7 +75,7 @@ commentForm = do
                 <input type="submit" value="Add comment">
         |])
     where
-        fieldRow fi = [$hamlet|
+        fieldRow fi = [hamlet|
             <tr .#{toHtml (clazz fi)}>
                 <th>
                     <label for="#{fiIdent fi}">#{fiLabel fi}

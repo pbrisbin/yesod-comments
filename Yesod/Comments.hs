@@ -49,7 +49,7 @@ addComments tid = do
             redirectCurrentRoute
 
     -- make the input box a bit bigger
-    addCassius [$cassius|
+    addCassius [cassius|
         .yesod_comment_input th
             text-align: left
             vertical-align: top
@@ -59,7 +59,7 @@ addComments tid = do
         |]
         
     -- show the input form
-    [$hamlet|
+    [hamlet|
         <div .yesod_comments>
             <h4>Add a comment:
             <div .yesod_comment_input>
@@ -88,7 +88,7 @@ addComments tid = do
         showComment comment =  do
             commentContent <- lift . markdownToHtml $ content comment
             let num = show $ commentId comment
-            addHamlet [$hamlet|
+            addHamlet [hamlet|
                 <p>
                     comment 
                     <span .yesod_comment_num>

@@ -23,7 +23,7 @@ data CommentTest = CommentTest { connPool :: ConnectionPool }
 type Handler = GHandler CommentTest CommentTest
 type Widget  = GWidget  CommentTest CommentTest
 
-mkYesod "CommentTest" [$parseRoutes| 
+mkYesod "CommentTest" [parseRoutes| 
     / RootR GET POST 
     |]
 
@@ -48,11 +48,11 @@ getRootR = defaultLayout $ do
     setTitle  $ toHtml ("comments test page" :: String)
 
     -- i hope he doesn't mind...
-    addHamletHead [$hamlet|
+    addHamletHead [hamlet|
         <link href="http://johnmacfarlane.net/css/hk-pyg.css" rel="stylesheet" media="screen" type="text/css">
         |]
 
-    addHamlet [$hamlet|
+    addHamlet [hamlet|
         <h1>Test Page
         <p>Welcome to my comments test page.
         <h3>Comments
