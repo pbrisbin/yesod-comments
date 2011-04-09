@@ -72,7 +72,7 @@ commentForm = do
             <tr>
                 <td>&nbsp;
                 <td colspan="2">
-                <input type="submit" value="Add comment">
+                    <input type="submit" value="Add comment">
         |])
     where
         fieldRow fi = [hamlet|
