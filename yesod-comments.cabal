@@ -21,7 +21,9 @@ library
                , time
                , old-locale
                , bytestring
+               , blaze-html
                , yesod
+               , yesod-form
                , yesod-markdown == 0.2.2.*
                , wai
                , persistent
