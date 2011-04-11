@@ -16,6 +16,8 @@ module Yesod.Comments.Core where
 import Yesod
 import Yesod.Markdown -- my fork, <https://github.com/pbrisbin/yesod-markdown> required
 import Yesod.Form.Core
+import Yesod.Helpers.Auth
+
 import Control.Applicative ((<$>), (<*>))
 import Data.Time.Clock     (UTCTime, getCurrentTime)
 import Network.Wai         (remoteHost)
@@ -32,6 +34,7 @@ class Yesod m => YesodComments m where
 
     -- Loading onto pages
     loadComments     :: ThreadId -> GHandler s m [Comment]
+
     getNextCommentId :: [Comment] -> GHandler s m CommentId
     getNextCommentId [] = return 1
     getNextCommentId cs = return $ maximum (map commentId cs) + 1
@@ -39,7 +42,12 @@ class Yesod m => YesodComments m where
     --- other
     commentFilters :: [(Comment -> GHandler s m Bool)]
     commentFilters = [const $ return False]
-    
+
+    -- | if using Auth, provide the function to get from a user id to 
+    --   the string to use as the commenter's username
+    displayUser :: AuthId m -> GHandler s m String
+    displayUser _ = return ""
+
 data Comment = Comment
     { threadId  :: ThreadId
     , commentId :: CommentId
@@ -61,9 +69,9 @@ markdownToHtml = (writePandoc yesodDefaultWriterOptions <$>)
                . parseMarkdown yesodDefaultParserState
 
 -- | The comment form itself
-commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
-commentForm = do
-    (user   , fiUser   ) <- stringField   "name:"    Nothing
+commentForm :: Maybe String -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentForm muname = do
+    (user   , fiUser   ) <- stringField   "name:"    muname
     (comment, fiComment) <- markdownField "comment:" Nothing
     return (CommentForm <$> user <*> comment, [hamlet|
         <table>

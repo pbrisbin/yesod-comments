@@ -24,6 +24,7 @@ library
                , bytestring
                , blaze-html
                , yesod
+               , yesod-auth
                , yesod-form
                , yesod-markdown == 0.2.2.*
                , wai
