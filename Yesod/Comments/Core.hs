@@ -78,10 +78,8 @@ data CommentForm = CommentForm
     } deriving Show
 
 -- | Render from markdown, yesod-style
-markdownToHtml :: Yesod m => Markdown -> GHandler s m Html
-markdownToHtml = (writePandoc yesodDefaultWriterOptions <$>) 
-               . localLinks 
-               . parseMarkdown yesodDefaultParserState
+markdownToHtml :: Markdown -> Html
+markdownToHtml = writePandoc yesodDefaultWriterOptions . parseMarkdown yesodDefaultParserState
 
 -- | Cleanse form input and create a 'Comment' to be stored
 commentFromForm :: ThreadId -> CommentId -> CommentForm -> GHandler s m Comment
@@ -159,7 +157,6 @@ clazz fi = if fiRequired fi then "required" else "optional"
 -- | Show a single comment, provides numbered anchors
 showComment :: Yesod m => Comment -> GWidget s m ()
 showComment comment =  do
-    commentContent   <- lift . markdownToHtml $ content comment
     commentTimestamp <- return . flip humanReadableTimeDiff (timeStamp comment) =<< liftIO getCurrentTime
     let anchor = "#comment_" ++ show (commentId comment)
     addHamlet [hamlet|
@@ -168,7 +165,7 @@ showComment comment =  do
             , #{userName comment} wrote:
 
         <blockquote>
-            #{commentContent}
+            #{markdownToHtml $ content comment}
         |]
 
 -- | Show a single comment, provides numbered anchors
@@ -181,7 +178,6 @@ showCommentAuth comment =  do
             Nothing  -> return cusername
             Just uid -> displayUser uid
 
-    commentContent   <- lift . markdownToHtml $ content comment
     commentTimestamp <- return . flip humanReadableTimeDiff (timeStamp comment) =<< liftIO getCurrentTime
     let anchor = "#comment_" ++ show (commentId comment)
     addHamlet [hamlet|
@@ -190,7 +186,7 @@ showCommentAuth comment =  do
             , #{username} wrote:
 
         <blockquote>
-            #{commentContent}
+            #{markdownToHtml $ content comment}
         |]
 
 -- <https://github.com/snoyberg/haskellers/blob/master/Haskellers.hs>
