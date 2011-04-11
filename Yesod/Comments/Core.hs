@@ -11,7 +11,18 @@
 -- Portability :  unportable
 --
 -------------------------------------------------------------------------------
-module Yesod.Comments.Core where
+module Yesod.Comments.Core
+    ( Comment(..)
+    , CommentForm(..)
+    , CommentId
+    , ThreadId
+    , YesodComments (..)
+    , commentFromForm
+    , commentForm
+    , commentFormAuth
+    , showComment
+    , showCommentAuth
+    ) where
 
 import Yesod
 import Yesod.Markdown -- my fork, <https://github.com/pbrisbin/yesod-markdown> required
@@ -109,7 +120,11 @@ commentFormAuth uid username = do
     (comment, fiComment) <- markdownField "comment:" Nothing
     return (CommentForm <$> user <*> comment, [hamlet|
         <table>
-            ^{fieldRow fiUser}
+            <tr style="display: none;">
+                    <th>
+                        <label for="#{fiIdent fiUser}">&nbsp;
+                    <td colspan="s">
+                        ^{fiInput fiUser}
 
             <tr>
                 <th>name:
@@ -172,7 +187,7 @@ showCommentAuth comment =  do
     addHamlet [hamlet|
         <p>
             <a href="#{anchor}" id="#{anchor}">#{commentTimestamp}
-            , #{userName comment} wrote:
+            , #{username} wrote:
 
         <blockquote>
             #{commentContent}
