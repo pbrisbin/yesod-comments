@@ -157,8 +157,15 @@ showComment comment =  do
         |]
 
 -- | Show a single comment, provides numbered anchors
-showCommentAuth :: Yesod m => Comment -> GWidget s m ()
+showCommentAuth :: (Yesod m, YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
 showCommentAuth comment =  do
+    username <- lift $ do
+        let cusername = userName comment
+        muid <- fmap (flip readAuthId cusername) getYesod
+        case muid of
+            Nothing  -> return cusername
+            Just uid -> displayUser uid
+
     commentContent   <- lift . markdownToHtml $ content comment
     commentTimestamp <- return . flip humanReadableTimeDiff (timeStamp comment) =<< liftIO getCurrentTime
     let anchor = "#comment_" ++ show (commentId comment)

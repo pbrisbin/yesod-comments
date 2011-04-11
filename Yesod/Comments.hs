@@ -13,11 +13,11 @@
 -- in the early stages of development. Beware bugs, patches welcome.
 --
 -------------------------------------------------------------------------------
-module Yesod.Comments where
---    ( addComments
---    , addCommentsAuth
---    , module Yesod.Comments.Core
---    ) where
+module Yesod.Comments
+    ( addComments
+    , addCommentsAuth
+    , module Yesod.Comments.Core
+    ) where
 
 import Yesod
 import Yesod.Comments.Core
@@ -44,7 +44,12 @@ addComments tid = do
                 <form enctype="#{enctype}" method="post">^{form}
                 <p .helptext>Comments are parsed as pandoc-style markdown
 
-            ^{displayComments comments}
+            $if not $ null comments
+                <h4>Showing #{toHtml $ helper $ length comments}:
+
+                $forall comment <- comments
+                    <div .yesod_comment>^{showComment comment}
+
     |]
 
 -- | Comments that require authentication
@@ -77,7 +82,11 @@ addCommentsAuth tid = do
             $else
                 <h4>Please ^{login} to post a comment.
 
-            ^{displayComments comments}
+            $if not $ null comments
+                <h4>Showing #{toHtml $ helper $ length comments}:
+
+                $forall comment <- comments
+                    <div .yesod_comment>^{showCommentAuth comment}
     |]
 
 
@@ -121,21 +130,10 @@ handleForm res tid cid = case res of
                 Just r  -> redirect RedirectTemporary $ tm r
                 Nothing -> notFound
 
-displayComments :: Yesod m => [Comment] -> GWidget s m ()
-displayComments comments = [hamlet|
-        $if not $ null comments
-
-            <h4>Showing #{toHtml $ helper $ length comments}:
-
-            $forall comment <- comments
-                <div .yesod_comment>^{showComment comment}
-    |]
-
-    where
-        helper :: Int -> String
-        helper 0 = "no comments"
-        helper 1 = "1 comment"
-        helper n = show n ++ " comments"
+helper :: Int -> String
+helper 0 = "no comments"
+helper 1 = "1 comment"
+helper n = show n ++ " comments"
 
 -- | Show the authroute as a link if set up
 login :: Yesod m => GWidget s m ()
