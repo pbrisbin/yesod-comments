@@ -48,7 +48,7 @@ class Yesod m => YesodComments m where
     deleteComment :: Comment -> GHandler s m ()
 
     -- Loading onto pages
-    loadComments     :: ThreadId -> GHandler s m [Comment]
+    loadComments     :: Maybe ThreadId -> GHandler s m [Comment]
 
     getNextCommentId :: [Comment] -> GHandler s m CommentId
     getNextCommentId [] = return 1

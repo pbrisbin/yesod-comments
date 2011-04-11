@@ -31,7 +31,7 @@ addComments :: YesodComments m
             => ThreadId -- ^ the thread you're adding comments to
             -> GWidget s m ()
 addComments tid = do
-    comments               <- lift $ loadComments tid
+    comments               <- lift $ loadComments (Just tid)
     cid                    <- lift $ getNextCommentId comments
     ((res, form), enctype) <- lift $ runFormMonadPost commentForm
 
@@ -66,7 +66,7 @@ addCommentsAuth tid = do
                 uname <- displayUser uid
                 return (True, uids, uname)
 
-    comments               <- lift $ loadComments tid
+    comments               <- lift $ loadComments (Just tid)
     cid                    <- lift $ getNextCommentId comments
     ((res, form), enctype) <- lift $ runFormMonadPost $ commentFormAuth uid username
 
