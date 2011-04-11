@@ -154,31 +154,23 @@ fieldRow fi = [hamlet|
 clazz :: FieldInfo s m -> String
 clazz fi = if fiRequired fi then "required" else "optional"
 
--- | Show a single comment, provides numbered anchors
+-- | Show a single comment
 showComment :: Yesod m => Comment -> GWidget s m ()
-showComment comment =  do
-    commentTimestamp <- return . flip humanReadableTimeDiff (timeStamp comment) =<< liftIO getCurrentTime
-    let anchor = "#comment_" ++ show (commentId comment)
-    addHamlet [hamlet|
-        <p>
-            <a href="#{anchor}" id="#{anchor}">#{commentTimestamp}
-            , #{userName comment} wrote:
+showComment comment = showHelper comment $ userName comment
 
-        <blockquote>
-            #{markdownToHtml $ content comment}
-        |]
-
--- | Show a single comment, provides numbered anchors
+-- | Show a single comment, auth version
 showCommentAuth :: (Yesod m, YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
-showCommentAuth comment =  do
-    username <- lift $ do
-        let cusername = userName comment
-        muid <- fmap (flip readAuthId cusername) getYesod
-        case muid of
-            Nothing  -> return cusername
-            Just uid -> displayUser uid
+showCommentAuth comment = do
+    let cusername = userName comment
+    muid <- lift $ fmap (flip readAuthId cusername) getYesod
+    case muid of
+        Nothing  -> showHelper comment cusername
+        Just uid -> showHelper comment =<< lift (displayUser uid)
 
-    commentTimestamp <- return . flip humanReadableTimeDiff (timeStamp comment) =<< liftIO getCurrentTime
+-- | Factor out common code
+showHelper :: Yesod m => Comment -> String -> GWidget s m ()
+showHelper comment username = do
+    commentTimestamp <- fmap (flip humanReadableTimeDiff (timeStamp comment)) $ liftIO getCurrentTime
     let anchor = "#comment_" ++ show (commentId comment)
     addHamlet [hamlet|
         <p>
@@ -197,6 +189,7 @@ humanReadableTimeDiff :: UTCTime     -- ^ current time
 humanReadableTimeDiff curTime oldTime = helper diff
 
     where
+
         diff    = diffUTCTime curTime oldTime
 
         minutes :: NominalDiffTime -> Double
