@@ -24,6 +24,8 @@ import Yesod.Comments.Core
 import Yesod.Comments.Filters (applyFilters)
 import Yesod.Helpers.Auth
 
+import qualified Data.Text as T
+
 -- | Comments that anyone can enter anonymously
 addComments :: YesodComments m 
             => ThreadId -- ^ the thread you're adding comments to
@@ -60,7 +62,7 @@ addCommentsAuth tid = do
         case muid of
             Nothing  -> return (False, "", "")
             Just uid -> do
-                uids  <- fmap (flip showAuthId uid) getYesod
+                let uids = T.unpack $ toSinglePiece uid
                 uname <- displayUser uid
                 return (True, uids, uname)
 

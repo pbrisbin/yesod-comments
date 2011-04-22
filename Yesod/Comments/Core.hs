@@ -47,31 +47,24 @@ class Yesod m => YesodComments m where
     storeComment  :: Comment -> GHandler s m ()
     deleteComment :: Comment -> GHandler s m ()
 
-    -- Loading onto pages
+    -- | Loading all comments, possibly filtered to a single thread.
     loadComments     :: Maybe ThreadId -> GHandler s m [Comment]
 
+    -- | Get the next available Id given the passed list of comments. In 
+    --   Handler in case there is a database call involved.
     getNextCommentId :: [Comment] -> GHandler s m CommentId
     getNextCommentId [] = return 1
     getNextCommentId cs = return $ maximum (map commentId cs) + 1
 
-    --- other
+    -- | See "Yesod.Comments.Filters"
     commentFilters :: [(Comment -> GHandler s m Bool)]
     commentFilters = [const $ return False]
 
     -- | if using Auth, provide the function to get from a user id to 
-    --   the string to use as the commenter's username
+    --   the string to use as the commenter's username. This should 
+    --   return something friendlier than just a conversion to 'String'
     displayUser :: AuthId m -> GHandler s m String
     displayUser _ = return ""
-
-    -- | if using Auth, provide a way to read your auth id from a
-    --   string. this is needed because the user id is stored in the
-    --   comment database as a String
-    readAuthId :: m -> String -> Maybe (AuthId m)
-    readAuthId _ _ = Nothing
-
-    -- | if using Auth, provide a string representation for your auth id
-    showAuthId :: m -> AuthId m -> String
-    showAuthId _ _ = ""
 
 data Comment = Comment
     { threadId  :: ThreadId
@@ -168,8 +161,7 @@ showComment comment = showHelper comment $ userName comment
 showCommentAuth :: (Yesod m, YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
 showCommentAuth comment = do
     let cusername = userName comment
-    muid <- lift $ fmap (flip readAuthId cusername) getYesod
-    case muid of
+    case fromSinglePiece $ T.pack cusername of
         Nothing  -> showHelper comment cusername
         Just uid -> showHelper comment =<< lift (displayUser uid)
 
