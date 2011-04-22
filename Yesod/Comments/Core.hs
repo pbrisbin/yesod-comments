@@ -25,9 +25,9 @@ module Yesod.Comments.Core
     ) where
 
 import Yesod
-import Yesod.Markdown -- my fork, <https://github.com/pbrisbin/yesod-markdown> required
 import Yesod.Form.Core
 import Yesod.Helpers.Auth
+import Yesod.Comments.Markdown
 
 import Data.Time
 import System.Locale
@@ -36,7 +36,8 @@ import Data.Char           (isSpace)
 import Control.Applicative ((<$>), (<*>))
 import Data.Time.Clock     (UTCTime, getCurrentTime)
 import Network.Wai         (remoteHost)
-import Text.Blaze          (toHtml)
+
+import qualified Data.Text as T
 
 type ThreadId  = String
 type CommentId = Int
@@ -63,6 +64,16 @@ class Yesod m => YesodComments m where
     displayUser :: AuthId m -> GHandler s m String
     displayUser _ = return ""
 
+    -- | if using Auth, provide a way to read your auth id from a
+    --   string. this is needed because the user id is stored in the
+    --   comment database as a String
+    readAuthId :: m -> String -> Maybe (AuthId m)
+    readAuthId _ _ = Nothing
+
+    -- | if using Auth, provide a string representation for your auth id
+    showAuthId :: m -> AuthId m -> String
+    showAuthId _ _ = ""
+
 data Comment = Comment
     { threadId  :: ThreadId
     , commentId :: CommentId
@@ -73,13 +84,9 @@ data Comment = Comment
     } deriving (Eq,Show)
 
 data CommentForm = CommentForm
-    { formUser    :: String
+    { formUser    :: T.Text
     , formComment :: Markdown
     } deriving Show
-
--- | Render from markdown, yesod-style
-markdownToHtml :: Markdown -> Html
-markdownToHtml = writePandoc yesodDefaultWriterOptions . parseMarkdown yesodDefaultParserState
 
 -- | Cleanse form input and create a 'Comment' to be stored
 commentFromForm :: ThreadId -> CommentId -> CommentForm -> GHandler s m Comment
@@ -91,7 +98,7 @@ commentFromForm tid cid cf = do
         , commentId = cid 
         , timeStamp = now
         , ipAddress = ip
-        , userName  = formUser cf
+        , userName  = T.unpack $ formUser cf
         , content   = formComment cf
         }
 
@@ -114,7 +121,7 @@ commentForm = do
 --   name is shown 
 commentFormAuth :: String -> String -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentFormAuth uid username = do
-    (user   , fiUser   ) <- hiddenField   "name:"    (Just $ uid)
+    (user   , fiUser   ) <- hiddenField   "name:"    (Just $ T.pack uid)
     (comment, fiComment) <- markdownField "comment:" Nothing
     return (CommentForm <$> user <*> comment, [hamlet|
         <table>
@@ -137,7 +144,7 @@ commentFormAuth uid username = do
 
 fieldRow :: FieldInfo s m -> GWidget s m ()
 fieldRow fi = [hamlet|
-    <tr .#{toHtml (clazz fi)}>
+    <tr .#{clazz fi}>
         <th>
             <label for="#{fiIdent fi}">#{fiLabel fi}
             <div .tooltip>#{fiTooltip fi}

@@ -30,14 +30,13 @@ module Yesod.Comments.Storage
     ) where
 
 import Yesod
-import Yesod.Markdown      (Markdown(..))
-import Yesod.Comments.Core (Comment(..), ThreadId, CommentId)
-import Data.Time.Clock     (UTCTime)
-import System.IO           (hPutStrLn, stderr)
-import Database.Persist.TH         (share2)
-import Database.Persist.GenericSql (mkMigrate)
+import Yesod.Comments.Core     (Comment(..), ThreadId, CommentId)
+import Yesod.Comments.Markdown (Markdown(..))
+import Data.Time.Clock         (UTCTime)
+import System.IO               (hPutStrLn, stderr)
+import Database.Persist.TH     (share2, mkMigrate)
 
--- $yesodpersist
+-- $persist
 --
 -- Use these functions to store your comments in an instance of 
 -- YesodPersist

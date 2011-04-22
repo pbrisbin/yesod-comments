@@ -1,6 +1,7 @@
 {-# LANGUAGE QuasiQuotes           #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 --
 -- pbrisbin 2010
@@ -17,6 +18,7 @@ import Yesod
 import Network.Wai.Handler.Warp (run)
 import Database.Persist.Sqlite
 import Database.Persist.GenericSql
+import Control.Monad.IO.Peel (MonadPeelIO)
 import Text.Blaze (toHtml)
 
 data CommentTest = CommentTest { connPool :: ConnectionPool }
@@ -33,7 +35,9 @@ instance YesodPersist CommentTest where
     type YesodDB CommentTest = SqlPersist
     runDB db = liftIOHandler $ fmap connPool getYesod >>= runSqlPool db
 
-withConnectionPool :: MonadPeelIO m => (ConnectionPool -> m a) -> m a
+withConnectionPool :: (Yesod.MonadControlIO m, MonadPeelIO m) 
+                   => (ConnectionPool -> m a) 
+                   -> m a
 withConnectionPool = withSqlitePool "comments.db3" 10
 
 instance YesodComments CommentTest where
