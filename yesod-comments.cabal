@@ -22,6 +22,7 @@ library
   build-depends: base
                , text
                , time
+               , directory
                , old-locale
                , bytestring
                , blaze-html
@@ -30,6 +31,8 @@ library
                , yesod-form
                , wai
                , persistent
+               , persistent-template
+               , pandoc
                , xss-sanitize
                , hamlet
                , wai
