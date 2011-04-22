@@ -33,8 +33,6 @@ import Yesod
 import Yesod.Comments.Core     (Comment(..), ThreadId, CommentId)
 import Yesod.Comments.Markdown (Markdown(..))
 import Data.Time.Clock         (UTCTime)
-import System.IO               (hPutStrLn, stderr)
-import Database.Persist.TH     (share2, mkMigrate)
 
 -- $persist
 --

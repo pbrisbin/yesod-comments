@@ -24,8 +24,6 @@ import Yesod.Comments.Core
 import Yesod.Comments.Filters (applyFilters)
 import Yesod.Helpers.Auth
 
-import Text.Blaze (toHtml)
-
 -- | Comments that anyone can enter anonymously
 addComments :: YesodComments m 
             => ThreadId -- ^ the thread you're adding comments to

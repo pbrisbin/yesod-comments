@@ -34,7 +34,6 @@ import System.Locale
 
 import Data.Char           (isSpace)
 import Control.Applicative ((<$>), (<*>))
-import Data.Time.Clock     (UTCTime, getCurrentTime)
 import Network.Wai         (remoteHost)
 
 import qualified Data.Text as T
