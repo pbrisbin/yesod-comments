@@ -16,9 +16,11 @@ library
                  , Yesod.Comments.Core
                  , Yesod.Comments.Storage
                  , Yesod.Comments.Filters
+                 , Yesod.Comments.Markdown
   
   -- Packages needed in order to build this package.
   build-depends: base
+               , text
                , time
                , old-locale
                , bytestring
@@ -26,7 +28,6 @@ library
                , yesod
                , yesod-auth
                , yesod-form
-               , yesod-markdown == 0.2.2.*
                , wai
                , persistent
                , xss-sanitize
