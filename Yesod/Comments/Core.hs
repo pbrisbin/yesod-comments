@@ -168,7 +168,7 @@ showCommentAuth comment = do
 -- | Factor out common code
 showHelper :: Yesod m => Comment -> String -> GWidget s m ()
 showHelper comment username = do
-    commentTimestamp <- fmap (flip humanReadableTimeDiff (timeStamp comment)) $ liftIO getCurrentTime
+    commentTimestamp <- lift . humanReadableTimeDiff $ timeStamp comment
     let anchor = "#comment_" ++ show (commentId comment)
     addHamlet [hamlet|
         <p>
@@ -181,15 +181,12 @@ showHelper comment username = do
 
 -- <https://github.com/snoyberg/haskellers/blob/master/Haskellers.hs>
 -- <https://github.com/snoyberg/haskellers/blob/master/LICENSE>
-humanReadableTimeDiff :: UTCTime     -- ^ current time
-                      -> UTCTime     -- ^ old time
-                      -> String
-humanReadableTimeDiff curTime oldTime = helper diff
+humanReadableTimeDiff :: UTCTime -> GHandler s m String
+humanReadableTimeDiff t = do
+    now <- liftIO getCurrentTime
+    return . go $ diffUTCTime now t
 
     where
-
-        diff    = diffUTCTime curTime oldTime
-
         minutes :: NominalDiffTime -> Double
         minutes n = realToFrac $ n / 60
 
@@ -208,7 +205,7 @@ humanReadableTimeDiff curTime oldTime = helper diff
         i2s :: RealFrac a => a -> String
         i2s n = show m where m = truncate n :: Int
 
-        old = utcToLocalTime utc oldTime
+        old = utcToLocalTime utc t
 
         trim = f . f where f = reverse . dropWhile isSpace
 
@@ -216,15 +213,16 @@ humanReadableTimeDiff curTime oldTime = helper diff
         thisYear      = trim $! formatTime defaultTimeLocale "%b %e" old
         previousYears = trim $! formatTime defaultTimeLocale "%b %e, %Y" old
 
-        helper  d | d < 1          = "just now"
-                  | d < 60         = i2s d ++ " seconds ago"
-                  | minutes d < 2  = "one minute ago"
-                  | minutes d < 60 =  i2s (minutes d) ++ " minutes ago"
-                  | hours d < 2    = "one hour ago"
-                  | hours d < 24   = "about " ++ i2s (hours d) ++ " hours ago"
-                  | days d < 5     = "at " ++ dow
-                  | days d < 10    = i2s (days d)  ++ " days ago"
-                  | weeks d < 2    = i2s (weeks d) ++ " week ago"
-                  | weeks d < 5    = i2s (weeks d)  ++ " weeks ago"
-                  | years d < 1    = "on " ++ thisYear
-                  | otherwise      = "on " ++ previousYears
+        go d 
+            | d         < 1  = "just now"
+            | d         < 60 = i2s d ++ " seconds ago"
+            | minutes d < 2  = "one minute ago"
+            | minutes d < 60 =  i2s (minutes d) ++ " minutes ago"
+            | hours d   < 2  = "one hour ago"
+            | hours d   < 24 = "about " ++ i2s (hours d) ++ " hours ago"
+            | days d    < 5  = "at " ++ dow
+            | days d    < 10 = i2s (days d)  ++ " days ago"
+            | weeks d   < 2  = i2s (weeks d) ++ " week ago"
+            | weeks d   < 5  = i2s (weeks d)  ++ " weeks ago"
+            | years d   < 1  = "on " ++ thisYear
+            | otherwise      = "on " ++ previousYears
