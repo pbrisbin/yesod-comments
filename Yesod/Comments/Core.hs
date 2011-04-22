@@ -149,7 +149,6 @@ fieldRow fi = [hamlet|
                 &nbsp;
     |]
 
-
 clazz :: FieldInfo s m -> String
 clazz fi = if fiRequired fi then "required" else "optional"
 
