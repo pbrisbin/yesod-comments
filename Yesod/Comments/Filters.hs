@@ -16,7 +16,7 @@ module Yesod.Comments.Filters
 
 import Yesod
 import Yesod.Comments.Core (Comment(..))
-import Control.Monad (liftM)
+import qualified Data.Text as T
 
 -- | Apply each filter a given list, return True if the Comment matches 
 --   any one filter
@@ -28,5 +28,5 @@ applyFilters (p:ps) c = p c >>= \b -> if b then return True else applyFilters ps
 --   matches one in the file
 blacklistFile :: (Yesod m) => FilePath -> Comment -> GHandler s m Bool
 blacklistFile f c = do
-    blacklist <- liftM lines $ liftIO $ readFile f
-    return $ (ipAddress c) `elem` blacklist
+    contents <- liftIO $ readFile f
+    return $ (T.unpack $ ipAddress c) `elem` (lines contents)

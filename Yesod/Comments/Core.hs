@@ -38,7 +38,7 @@ import Network.Wai         (remoteHost)
 
 import qualified Data.Text as T
 
-type ThreadId  = String
+type ThreadId  = T.Text
 type CommentId = Int
 
 class Yesod m => YesodComments m where
@@ -48,7 +48,7 @@ class Yesod m => YesodComments m where
     deleteComment :: Comment -> GHandler s m ()
 
     -- | Loading all comments, possibly filtered to a single thread.
-    loadComments     :: Maybe ThreadId -> GHandler s m [Comment]
+    loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
 
     -- | Get the next available Id given the passed list of comments. In 
     --   Handler in case there is a database call involved.
@@ -58,27 +58,27 @@ class Yesod m => YesodComments m where
 
     -- | See "Yesod.Comments.Filters"
     commentFilters :: [(Comment -> GHandler s m Bool)]
-    commentFilters = [const $ return False]
+    commentFilters = []
 
     -- | if using Auth, provide the function to get from a user id to 
     --   the string to use as the commenter's username. This should 
     --   return something friendlier than just a conversion to 'String'
-    displayUser :: AuthId m -> GHandler s m String
+    displayUser :: AuthId m -> GHandler s m T.Text
     displayUser _ = return ""
 
 data Comment = Comment
     { threadId  :: ThreadId
     , commentId :: CommentId
     , timeStamp :: UTCTime
-    , ipAddress :: String
-    , userName  :: String
+    , ipAddress :: T.Text
+    , userName  :: T.Text
     , content   :: Markdown
-    } deriving (Eq,Show)
+    }
 
 data CommentForm = CommentForm
     { formUser    :: T.Text
     , formComment :: Markdown
-    } deriving Show
+    }
 
 -- | Cleanse form input and create a 'Comment' to be stored
 commentFromForm :: ThreadId -> CommentId -> CommentForm -> GHandler s m Comment
@@ -89,8 +89,8 @@ commentFromForm tid cid cf = do
         { threadId  = tid 
         , commentId = cid 
         , timeStamp = now
-        , ipAddress = ip
-        , userName  = T.unpack $ formUser cf
+        , ipAddress = T.pack ip
+        , userName  = formUser cf
         , content   = formComment cf
         }
 
@@ -111,9 +111,9 @@ commentForm = do
 
 -- | The comment form if using authentication (uid is hidden and display
 --   name is shown 
-commentFormAuth :: String -> String -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentFormAuth :: T.Text -> T.Text -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentFormAuth uid username = do
-    (user   , fiUser   ) <- hiddenField   "name:"    (Just $ T.pack uid)
+    (user   , fiUser   ) <- hiddenField   "name:"    (Just uid)
     (comment, fiComment) <- markdownField "comment:" Nothing
     return (CommentForm <$> user <*> comment, [hamlet|
         <table>
@@ -160,12 +160,12 @@ showComment comment = showHelper comment $ userName comment
 showCommentAuth :: (Yesod m, YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
 showCommentAuth comment = do
     let cusername = userName comment
-    case fromSinglePiece $ T.pack cusername of
+    case fromSinglePiece $ cusername of
         Nothing  -> showHelper comment cusername
         Just uid -> showHelper comment =<< lift (displayUser uid)
 
 -- | Factor out common code
-showHelper :: Yesod m => Comment -> String -> GWidget s m ()
+showHelper :: Yesod m => Comment -> T.Text -> GWidget s m ()
 showHelper comment username = do
     commentTimestamp <- lift . humanReadableTimeDiff $ timeStamp comment
     let anchor = "#comment_" ++ show (commentId comment)

@@ -33,6 +33,7 @@ import Yesod
 import Yesod.Comments.Core     (Comment(..), ThreadId, CommentId)
 import Yesod.Comments.Markdown (Markdown(..))
 import Data.Time.Clock         (UTCTime)
+import qualified Data.Text as T
 
 -- $persist
 --
@@ -44,12 +45,12 @@ import Data.Time.Clock         (UTCTime)
 --   general yesod app
 share2 mkPersist (mkMigrate "migrateComments") [persist|
 SqlComment
-    threadId  String Eq
-    commentId Int Eq Asc
+    threadId  ThreadId  Eq
+    commentId CommentId Eq Asc
     timeStamp UTCTime
-    ipAddress String
-    userName  String
-    content   String
+    ipAddress T.Text
+    userName  T.Text
+    content   Markdown
     UniqueSqlComment threadId commentId
 |]
 
@@ -61,12 +62,10 @@ toSqlComment comment = SqlComment
     , sqlCommentTimeStamp = timeStamp comment
     , sqlCommentIpAddress = ipAddress comment
     , sqlCommentUserName  = userName  comment
-    , sqlCommentContent   = unMarkdown $ content comment
+    , sqlCommentContent   = content comment
     }
-    where
-        unMarkdown (Markdown s) = s
 
--- | Maybe read a 'Comment' back from a selected 'SqlComment'
+-- | Read a 'Comment' back from a selected 'SqlComment'
 fromSqlComment :: SqlComment -> Comment
 fromSqlComment sqlComment = Comment
     { threadId  = sqlCommentThreadId  sqlComment
@@ -74,7 +73,7 @@ fromSqlComment sqlComment = Comment
     , timeStamp = sqlCommentTimeStamp sqlComment
     , ipAddress = sqlCommentIpAddress sqlComment
     , userName  = sqlCommentUserName  sqlComment
-    , content   = Markdown $ sqlCommentContent sqlComment
+    , content   = sqlCommentContent   sqlComment
     }
 
 getCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => ThreadId -> CommentId -> GHandler s m (Maybe Comment)

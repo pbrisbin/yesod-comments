@@ -42,11 +42,11 @@ instance YesodComments CommentTest where
     storeComment   = storeCommentPersist
     deleteComment  = deleteCommentPersist
     loadComments   = loadCommentsPersist
-    commentFilters = [blacklistFile "blacklist.txt"]
+    --commentFilters = [blacklistFile "blacklist.txt"]
 
 getRootR :: Handler RepHtml
 getRootR = defaultLayout $ do
-    setTitle  $ toHtml ("comments test page" :: String)
+    setTitle "comments test page"
 
     -- i hope he doesn't mind...
     addHamletHead [hamlet|

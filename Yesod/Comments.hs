@@ -1,5 +1,6 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments
@@ -62,9 +63,8 @@ addCommentsAuth tid = do
         case muid of
             Nothing  -> return (False, "", "")
             Just uid -> do
-                let uids = T.unpack $ toSinglePiece uid
                 uname <- displayUser uid
-                return (True, uids, uname)
+                return (True, toSinglePiece uid, uname)
 
     comments               <- lift $ loadComments (Just tid)
     cid                    <- lift $ getNextCommentId comments
@@ -114,10 +114,10 @@ handleForm res tid cid = case res of
         comment <- commentFromForm tid cid cf
         matches <- applyFilters commentFilters comment
         if matches
-            then setMessage $ toHtml "comment dropped. matched filters."
+            then setMessage "comment dropped. matched filters."
             else do
                 storeComment comment
-                setMessage $ toHtml "comment added."
+                setMessage "comment added."
         redirectCurrentRoute
 
     where
