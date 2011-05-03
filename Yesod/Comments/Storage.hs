@@ -30,9 +30,9 @@ module Yesod.Comments.Storage
     ) where
 
 import Yesod
-import Yesod.Comments.Core     (Comment(..), ThreadId, CommentId)
-import Yesod.Comments.Markdown (Markdown(..))
-import Data.Time.Clock         (UTCTime)
+import Yesod.Comments.Core    (Comment(..), ThreadId, CommentId)
+import Yesod.Goodies.Markdown (Markdown(..))
+import Data.Time.Clock        (UTCTime)
 import qualified Data.Text as T
 
 -- $persist

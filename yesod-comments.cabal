@@ -1,5 +1,5 @@
 name:                yesod-comments
-version:             0.1
+version:             0.2.0
 synopsis:            A generic comments interface for a Yesod application
 homepage:            http://github.com/pbrisbin/yesod-comments
 license:             BSD3
@@ -16,26 +16,20 @@ library
                  , Yesod.Comments.Core
                  , Yesod.Comments.Storage
                  , Yesod.Comments.Filters
-                 , Yesod.Comments.Markdown
   
   -- Packages needed in order to build this package.
   build-depends: base
                , text
                , time
                , directory
-               , old-locale
                , bytestring
-               , blaze-html
+               , wai
                , yesod
                , yesod-auth
                , yesod-form
-               , wai
+               , yesod-goodies
                , persistent
                , persistent-template
-               , pandoc
-               , xss-sanitize
-               , hamlet
-               , wai
   
   ghc-options: -Wall
   
