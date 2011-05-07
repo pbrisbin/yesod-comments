@@ -50,6 +50,7 @@ SqlComment
     timeStamp UTCTime
     ipAddress T.Text
     userName  T.Text
+    userEmail T.Text
     content   Markdown
     UniqueSqlComment threadId commentId
 |]
@@ -62,7 +63,8 @@ toSqlComment comment = SqlComment
     , sqlCommentTimeStamp = timeStamp comment
     , sqlCommentIpAddress = ipAddress comment
     , sqlCommentUserName  = userName  comment
-    , sqlCommentContent   = content comment
+    , sqlCommentUserEmail = userEmail comment
+    , sqlCommentContent   = content   comment
     }
 
 -- | Read a 'Comment' back from a selected 'SqlComment'
@@ -73,6 +75,7 @@ fromSqlComment sqlComment = Comment
     , timeStamp = sqlCommentTimeStamp sqlComment
     , ipAddress = sqlCommentIpAddress sqlComment
     , userName  = sqlCommentUserName  sqlComment
+    , userEmail = sqlCommentUserEmail sqlComment
     , content   = sqlCommentContent   sqlComment
     }
 

@@ -27,6 +27,7 @@ module Yesod.Comments.Core
 import Yesod
 import Yesod.Form.Core
 import Yesod.Helpers.Auth
+import Yesod.Goodies.Gravatar
 import Yesod.Goodies.Markdown
 import Yesod.Goodies.Time
 import Control.Applicative ((<$>), (<*>))
@@ -63,17 +64,24 @@ class Yesod m => YesodComments m where
     displayUser :: AuthId m -> GHandler s m T.Text
     displayUser _ = return ""
 
+    -- | if using Auth, provide the function to get form a user id to 
+    --   the string to use as the commenter's email.
+    displayEmail :: AuthId m -> GHandler s m T.Text
+    displayEmail _ = return ""
+
 data Comment = Comment
     { threadId  :: ThreadId
     , commentId :: CommentId
     , timeStamp :: UTCTime
     , ipAddress :: T.Text
     , userName  :: T.Text
+    , userEmail :: T.Text
     , content   :: Markdown
     }
 
 data CommentForm = CommentForm
     { formUser    :: T.Text
+    , formEmail   :: T.Text
     , formComment :: Markdown
     }
 
@@ -88,6 +96,7 @@ commentFromForm tid cid cf = do
         , timeStamp = now
         , ipAddress = T.pack ip
         , userName  = formUser cf
+        , userEmail = formEmail cf
         , content   = formComment cf
         }
 
@@ -95,10 +104,12 @@ commentFromForm tid cid cf = do
 commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentForm = do
     (user   , fiUser   ) <- stringField   "name:"    Nothing
+    (email  , fiEmail  ) <- emailField    "email:"   Nothing
     (comment, fiComment) <- markdownField "comment:" Nothing
-    return (CommentForm <$> user <*> comment, [hamlet|
+    return (CommentForm <$> user <*> email <*> comment, [hamlet|
         <table>
             ^{fieldRow fiUser}
+            ^{fieldRow fiEmail}
             ^{fieldRow fiComment}
             <tr>
                 <td>&nbsp;
@@ -107,22 +118,40 @@ commentForm = do
         |])
 
 -- | The comment form if using authentication (uid is hidden and display
---   name is shown 
-commentFormAuth :: T.Text -> T.Text -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
-commentFormAuth uid username = do
+--   name is shown)
+commentFormAuth :: T.Text -> T.Text -> T.Text -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentFormAuth uid username email = do
     (user   , fiUser   ) <- hiddenField   "name:"    (Just uid)
+    (email' , fiEmail  ) <- hiddenField   "email:"   (Just email)
     (comment, fiComment) <- markdownField "comment:" Nothing
-    return (CommentForm <$> user <*> comment, [hamlet|
+
+    let img = gravatarImg email defaultOptions
+
+    return (CommentForm <$> user <*> email' <*> comment, [hamlet|
+        <div .yesod_comment_avatar_input>
+            <a title="change your profile picture at gravatar" href="http://gravatar.com/emails/">
+                <img src="#{img}">
+
         <table>
             <tr style="display: none;">
                     <th>
                         <label for="#{fiIdent fiUser}">&nbsp;
-                    <td colspan="s">
+                    <td colspan="2">
                         ^{fiInput fiUser}
+
+            <tr style="display: none;">
+                    <th>
+                        <label for="#{fiIdent fiEmail}">&nbsp;
+                    <td colspan="2">
+                        ^{fiInput fiEmail}
 
             <tr>
                 <th>name:
                 <td colspan="2">#{username}
+
+            <tr>
+                <th>email:
+                <td colspan="2">#{email}
 
             ^{fieldRow fiComment}
             <tr>
@@ -166,7 +195,11 @@ showHelper :: Yesod m => Comment -> T.Text -> GWidget s m ()
 showHelper comment username = do
     commentTimestamp <- lift . humanReadableTime $ timeStamp comment
     let anchor = "#comment_" ++ show (commentId comment)
+    let img = gravatarImg (userEmail comment) defaultOptions { gSize = Just $ Size 20 }
     addHamlet [hamlet|
+        <div .yesod_comment_avatar_list>
+            <img src="#{img}">
+
         <p>
             <a href="#{anchor}" id="#{anchor}">#{commentTimestamp}
             , #{username} wrote:

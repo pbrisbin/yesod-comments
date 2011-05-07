@@ -25,8 +25,6 @@ import Yesod.Comments.Core
 import Yesod.Comments.Filters (applyFilters)
 import Yesod.Helpers.Auth
 
-import qualified Data.Text as T
-
 -- | Comments that anyone can enter anonymously
 addComments :: YesodComments m 
             => ThreadId -- ^ the thread you're adding comments to
@@ -58,17 +56,18 @@ addCommentsAuth :: (YesodAuth m, YesodComments m)
                 => ThreadId -- ^ the thread you're adding comments to
                 -> GWidget s m ()
 addCommentsAuth tid = do
-    (isAuthenticated, uid, username) <- lift $ do
+    (isAuthenticated, uid, username, email) <- lift $ do
         muid <- maybeAuthId
         case muid of
-            Nothing  -> return (False, "", "")
+            Nothing  -> return (False, "", "", "")
             Just uid -> do
                 uname <- displayUser uid
-                return (True, toSinglePiece uid, uname)
+                email <- displayEmail uid
+                return (True, toSinglePiece uid, uname, email)
 
     comments               <- lift $ loadComments (Just tid)
     cid                    <- lift $ getNextCommentId comments
-    ((res, form), enctype) <- lift $ runFormMonadPost $ commentFormAuth uid username
+    ((res, form), enctype) <- lift $ runFormMonadPost $ commentFormAuth uid username email
 
     handleForm res tid cid
     addStyling
@@ -99,6 +98,12 @@ addStyling = addCassius [cassius|
     .yesod_comment_input textarea
         height: 10ex
         width: 50ex
+    .yesod_comment_avatar_input, .yesod_comment_avatar_list
+        float: left
+    .yesod_comment_avatar_input
+        margin-right: 5px
+    .yesod_comment_avatar_list
+        margin-right: 3px
     |]
 
 -- | Handle the posted form and actually insert the comment
