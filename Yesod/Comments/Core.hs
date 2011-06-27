@@ -149,10 +149,6 @@ commentFormAuth uid username email = do
                 <th>name:
                 <td colspan="2">#{username}
 
-            <tr>
-                <th>email:
-                <td colspan="2">#{email}
-
             ^{fieldRow fiComment}
             <tr>
                 <td>&nbsp;
