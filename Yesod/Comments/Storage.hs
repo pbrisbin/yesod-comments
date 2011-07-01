@@ -45,8 +45,8 @@ import qualified Data.Text as T
 --   general yesod app
 share2 mkPersist (mkMigrate "migrateComments") [persist|
 SqlComment
-    threadId  ThreadId  Eq
-    commentId CommentId Eq Asc
+    threadId  ThreadId Eq noreference
+    commentId CommentId Eq Asc noreference
     timeStamp UTCTime
     ipAddress T.Text
     userName  T.Text
