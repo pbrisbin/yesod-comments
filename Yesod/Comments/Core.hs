@@ -121,8 +121,8 @@ commentForm = do
 --   name is shown)
 commentFormAuth :: T.Text -> T.Text -> T.Text -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentFormAuth uid username email = do
-    (user   , fiUser   ) <- hiddenField   "name:"    (Just uid)
-    (email' , fiEmail  ) <- hiddenField   "email:"   (Just email)
+    (user   , fiUser   ) <- hiddenField   "name:"    (fix uid  )
+    (email' , fiEmail  ) <- hiddenField   "email:"   (fix email)
     (comment, fiComment) <- markdownField "comment:" Nothing
 
     let img = gravatarImg email defaultOptions
@@ -155,6 +155,12 @@ commentFormAuth uid username email = do
                 <td colspan="2">
                     <input type="submit" value="Add comment">
         |])
+
+        where
+            -- make a text a usable argument for hiddenField
+            fix :: T.Text -> Maybe T.Text
+            fix "" = Just "x" -- it just can't be empty
+            fix t  = Just t
 
 fieldRow :: FieldInfo s m -> GWidget s m ()
 fieldRow fi = [hamlet|
