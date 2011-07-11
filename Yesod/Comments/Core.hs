@@ -191,14 +191,14 @@ showCommentAuth comment = do
 showHelper :: Yesod m => Comment -> (T.Text,T.Text) -> GWidget s m ()
 showHelper comment (username, email) = do
     commentTimestamp <- lift . humanReadableTime $ timeStamp comment
-    let anchor = "#comment_" ++ show (commentId comment)
+    let anchor = "comment_" ++ show (commentId comment)
     let img    = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
     addHamlet [hamlet|
         <div .yesod_comment_avatar_list>
             <img src="#{img}">
 
         <p>
-            <a href="#{anchor}" id="#{anchor}">#{commentTimestamp}
+            <a href="##{anchor}" id="#{anchor}">#{commentTimestamp}
             , #{username} wrote:
 
         <blockquote>
