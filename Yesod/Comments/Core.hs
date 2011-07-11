@@ -77,12 +77,14 @@ data Comment = Comment
     , userName  :: T.Text
     , userEmail :: T.Text
     , content   :: Markdown
+    , isAuth    :: Bool
     }
 
 data CommentForm = CommentForm
     { formUser    :: T.Text
     , formEmail   :: T.Text
     , formComment :: Markdown
+    , formIsAuth  :: Bool
     }
 
 -- | Cleanse form input and create a 'Comment' to be stored
@@ -95,9 +97,10 @@ commentFromForm tid cid cf = do
         , commentId = cid 
         , timeStamp = now
         , ipAddress = T.pack ip
-        , userName  = formUser cf
-        , userEmail = formEmail cf
+        , userName  = formUser    cf
+        , userEmail = formEmail   cf
         , content   = formComment cf
+        , isAuth    = formIsAuth  cf
         }
 
 -- | The comment form itself
@@ -106,7 +109,7 @@ commentForm = do
     (user   , fiUser   ) <- stringField   "name:"    Nothing
     (email  , fiEmail  ) <- emailField    "email:"   Nothing
     (comment, fiComment) <- markdownField "comment:" Nothing
-    return (CommentForm <$> user <*> email <*> comment, [hamlet|
+    return (CommentForm <$> user <*> email <*> comment <*> FormSuccess False, [hamlet|
         <table>
             ^{fieldRow fiUser}
             ^{fieldRow fiEmail}
@@ -119,32 +122,20 @@ commentForm = do
 
 -- | The comment form if using authentication (uid is hidden and display
 --   name is shown)
-commentFormAuth :: T.Text -> T.Text -> T.Text -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
-commentFormAuth uid username email = do
-    (user   , fiUser   ) <- hiddenField   "name:"    (fix uid  )
-    (email' , fiEmail  ) <- hiddenField   "email:"   (fix email)
+commentFormAuth :: T.Text -- ^ text version of uid
+                -> T.Text -- ^ friendly name
+                -> T.Text -- ^ email
+                -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentFormAuth user username email = do
+    let img = gravatarImg email defaultOptions { gDefault = Just MM }
+
     (comment, fiComment) <- markdownField "comment:" Nothing
-
-    let img = gravatarImg email defaultOptions
-
-    return (CommentForm <$> user <*> email' <*> comment, [hamlet|
+    return (CommentForm <$> FormSuccess user <*> FormSuccess email <*> comment <*> FormSuccess True, [hamlet|
         <div .yesod_comment_avatar_input>
             <a title="change your profile picture at gravatar" href="http://gravatar.com/emails/">
                 <img src="#{img}">
 
         <table>
-            <tr style="display: none;">
-                    <th>
-                        <label for="#{fiIdent fiUser}">&nbsp;
-                    <td colspan="2">
-                        ^{fiInput fiUser}
-
-            <tr style="display: none;">
-                    <th>
-                        <label for="#{fiIdent fiEmail}">&nbsp;
-                    <td colspan="2">
-                        ^{fiInput fiEmail}
-
             <tr>
                 <th>name:
                 <td colspan="2">#{username}
@@ -156,11 +147,6 @@ commentFormAuth uid username email = do
                     <input type="submit" value="Add comment">
         |])
 
-        where
-            -- make a text a usable argument for hiddenField
-            fix :: T.Text -> Maybe T.Text
-            fix "" = Just "x" -- it just can't be empty
-            fix t  = Just t
 
 fieldRow :: FieldInfo s m -> GWidget s m ()
 fieldRow fi = [hamlet|
@@ -187,21 +173,26 @@ showComment comment = showHelper comment (userName comment, userEmail comment)
 -- | Show a single comment, auth version
 showCommentAuth :: (Yesod m, YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
 showCommentAuth comment = do
-    let cusername = userName  comment
-    let cemail    = userEmail comment
-    case fromSinglePiece $ cusername of
-        Nothing  -> showHelper comment (cusername, cemail)
-        Just uid -> do
-            uname <- lift $ displayUser  uid
-            email <- lift $ displayEmail uid
-            showHelper comment (uname, email)
+    let cusername = userName comment
+
+    (cuname, cemail) <-
+        if isAuth comment
+            then case fromSinglePiece $ cusername of
+                Just uid -> do
+                    uname <- lift $ displayUser  uid
+                    email <- lift $ displayEmail uid
+                    return (uname, email)
+                _ -> return (cusername, userEmail comment)
+            else return (cusername, userEmail comment)
+
+    showHelper comment (cuname, cemail)
 
 -- | Factor out common code
 showHelper :: Yesod m => Comment -> (T.Text,T.Text) -> GWidget s m ()
 showHelper comment (username, email) = do
     commentTimestamp <- lift . humanReadableTime $ timeStamp comment
     let anchor = "#comment_" ++ show (commentId comment)
-    let img = gravatarImg email defaultOptions { gSize = Just $ Size 20 }
+    let img    = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
     addHamlet [hamlet|
         <div .yesod_comment_avatar_list>
             <img src="#{img}">

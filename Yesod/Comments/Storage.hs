@@ -52,6 +52,7 @@ SqlComment
     userName  T.Text
     userEmail T.Text
     content   Markdown
+    isAuth    Bool
     UniqueSqlComment threadId commentId
 |]
 
@@ -65,6 +66,7 @@ toSqlComment comment = SqlComment
     , sqlCommentUserName  = userName  comment
     , sqlCommentUserEmail = userEmail comment
     , sqlCommentContent   = content   comment
+    , sqlCommentIsAuth    = isAuth    comment
     }
 
 -- | Read a 'Comment' back from a selected 'SqlComment'
@@ -77,6 +79,7 @@ fromSqlComment sqlComment = Comment
     , userName  = sqlCommentUserName  sqlComment
     , userEmail = sqlCommentUserEmail sqlComment
     , content   = sqlCommentContent   sqlComment
+    , isAuth    = sqlCommentIsAuth    sqlComment
     }
 
 getCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => ThreadId -> CommentId -> GHandler s m (Maybe Comment)

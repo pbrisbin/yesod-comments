@@ -107,10 +107,10 @@ addStyling = addCassius [cassius|
     |]
 
 -- | Handle the posted form and actually insert the comment
-handleForm :: YesodComments m 
-           => FormResult CommentForm 
-           -> ThreadId 
-           -> CommentId 
+handleForm :: YesodComments m
+           => FormResult CommentForm
+           -> ThreadId
+           -> CommentId
            -> GWidget s m ()
 handleForm res tid cid = case res of
     FormMissing    -> return ()
