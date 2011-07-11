@@ -176,22 +176,26 @@ clazz fi = if fiRequired fi then "required" else "optional"
 
 -- | Show a single comment
 showComment :: Yesod m => Comment -> GWidget s m ()
-showComment comment = showHelper comment $ userName comment
+showComment comment = showHelper comment (userName comment, userEmail comment)
 
 -- | Show a single comment, auth version
 showCommentAuth :: (Yesod m, YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
 showCommentAuth comment = do
-    let cusername = userName comment
+    let cusername = userName  comment
+    let cemail    = userEmail comment
     case fromSinglePiece $ cusername of
-        Nothing  -> showHelper comment cusername
-        Just uid -> showHelper comment =<< lift (displayUser uid)
+        Nothing  -> showHelper comment (cusername, cemail)
+        Just uid -> do
+            uname <- lift $ displayUser  uid
+            email <- lift $ displayEmail uid
+            showHelper comment (uname, email)
 
 -- | Factor out common code
-showHelper :: Yesod m => Comment -> T.Text -> GWidget s m ()
-showHelper comment username = do
+showHelper :: Yesod m => Comment -> (T.Text,T.Text) -> GWidget s m ()
+showHelper comment (username, email) = do
     commentTimestamp <- lift . humanReadableTime $ timeStamp comment
     let anchor = "#comment_" ++ show (commentId comment)
-    let img = gravatarImg (userEmail comment) defaultOptions { gSize = Just $ Size 20 }
+    let img = gravatarImg email defaultOptions { gSize = Just $ Size 20 }
     addHamlet [hamlet|
         <div .yesod_comment_avatar_list>
             <img src="#{img}">
