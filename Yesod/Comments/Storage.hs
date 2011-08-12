@@ -22,6 +22,7 @@ module Yesod.Comments.Storage
     -- $persist
       getCommentPersist
     , storeCommentPersist
+    , updateCommentPersist
     , deleteCommentPersist
     , loadCommentsPersist
     , migrateComments
@@ -37,7 +38,7 @@ import qualified Data.Text as T
 
 -- $persist
 --
--- Use these functions to store your comments in an instance of 
+-- Use these functions to store your comments in an instance of
 -- YesodPersist
 --
 
@@ -51,7 +52,7 @@ SqlComment
     ipAddress T.Text
     userName  T.Text
     userEmail T.Text
-    content   Markdown
+    content   Markdown Update
     isAuth    Bool
     UniqueSqlComment threadId commentId
 |]
@@ -87,6 +88,14 @@ getCommentPersist tid cid = return . fmap (fromSqlComment . snd) =<< runDB (getB
 
 storeCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => Comment -> GHandler s m ()
 storeCommentPersist c = return . const () =<< runDB (insert $ toSqlComment c)
+
+-- | Note, only updates the content record
+updateCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => Comment -> Comment -> GHandler s m ()
+updateCommentPersist (Comment tid cid _ _ _ _ _ _) (Comment _ _ _ _ _ _ newContent _) = do
+    mres <- runDB (getBy $ UniqueSqlComment tid cid)
+    case mres of
+        Just (k,_) -> runDB $ update k [SqlCommentContent newContent]
+        _          -> return ()
 
 deleteCommentPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => Comment -> GHandler s m ()
 deleteCommentPersist c = return . const () =<< runDB (deleteBy $ UniqueSqlComment (threadId c) (commentId c))
