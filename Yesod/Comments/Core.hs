@@ -22,6 +22,7 @@ module Yesod.Comments.Core
     , commentFormAuth
     , showComment
     , showCommentAuth
+    , isCommentingUser
     ) where
 
 import Yesod
@@ -79,6 +80,9 @@ data Comment = Comment
     , content   :: Markdown
     , isAuth    :: Bool
     }
+
+instance Eq Comment where
+    a == b = (threadId a == threadId b) && (commentId a == commentId b)
 
 data CommentForm = CommentForm
     { formUser    :: T.Text
@@ -204,3 +208,12 @@ showHelper comment (username, email) = do
         <blockquote>
             #{markdownToHtml $ content comment}
         |]
+
+isCommentingUser :: (YesodAuth m, YesodComments m)
+                 => Comment
+                 -> GHandler s m Bool
+isCommentingUser comment = do
+    muid <- maybeAuthId
+    case muid of
+        Just uid -> return $ toSinglePiece uid == userName comment
+        _        -> return False
