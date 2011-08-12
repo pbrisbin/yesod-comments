@@ -41,12 +41,19 @@ type ThreadId  = T.Text
 type CommentId = Int
 
 class Yesod m => YesodComments m where
-    -- Data base actions
+    -- | Find a specific comment
     getComment    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+
+    -- | Store a new comment
     storeComment  :: Comment -> GHandler s m ()
+
+    -- | Update a comment
+    updateComment :: Comment -> Comment -> GHandler s m ()
+
+    -- | Remove a comment
     deleteComment :: Comment -> GHandler s m ()
 
-    -- | Loading all comments, possibly filtered to a single thread.
+    -- | Load all comments, possibly filtered to a single thread.
     loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
 
     -- | Get the next available Id given the passed list of comments. In 
