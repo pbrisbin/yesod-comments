@@ -22,6 +22,7 @@ module Yesod.Comments.Core
     , commentFormAuth
     , showComment
     , showCommentAuth
+    , getNextCommentId
     , isCommentingUser
     ) where
 
@@ -56,12 +57,6 @@ class Yesod m => YesodComments m where
     -- | Load all comments, possibly filtered to a single thread.
     loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
 
-    -- | Get the next available Id given the passed list of comments. In 
-    --   Handler in case there is a database call involved.
-    getNextCommentId :: [Comment] -> GHandler s m CommentId
-    getNextCommentId [] = return 1
-    getNextCommentId cs = return $ maximum (map commentId cs) + 1
-
     -- | See "Yesod.Comments.Filters"
     commentFilters :: [(Comment -> GHandler s m Bool)]
     commentFilters = []
@@ -70,7 +65,7 @@ class Yesod m => YesodComments m where
     --   the string to use as the commenter's username. This should 
     --   return something friendlier than just a conversion to 'String'
     displayUser :: AuthId m -> GHandler s m T.Text
-    displayUser _ = return ""
+    displayUser _ = return "" -- fixme: use toSinglePiece in new auth pkg
 
     -- | if using Auth, provide the function to get form a user id to 
     --   the string to use as the commenter's email.
@@ -99,10 +94,11 @@ data CommentForm = CommentForm
     }
 
 -- | Cleanse form input and create a 'Comment' to be stored
-commentFromForm :: ThreadId -> CommentId -> CommentForm -> GHandler s m Comment
-commentFromForm tid cid cf = do
+commentFromForm :: YesodComments m => ThreadId -> CommentForm -> GHandler s m Comment
+commentFromForm tid cf = do
     now <- liftIO getCurrentTime
     ip  <- return . show . remoteHost =<< waiRequest
+    cid <- getNextCommentId tid
     return Comment 
         { threadId  = tid 
         , commentId = cid 
@@ -215,6 +211,14 @@ showHelper comment (username, email) = do
         <blockquote>
             #{markdownToHtml $ content comment}
         |]
+
+getNextCommentId :: YesodComments m => ThreadId -> GHandler s m CommentId
+getNextCommentId tid = go =<< loadComments (Just tid)
+
+    where
+        go :: YesodComments m => [Comment] -> GHandler s m CommentId
+        go [] = return 1
+        go cs = return $ maximum (map commentId cs) + 1
 
 isCommentingUser :: (YesodAuth m, YesodComments m)
                  => Comment

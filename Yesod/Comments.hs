@@ -31,10 +31,9 @@ addComments :: YesodComments m
             -> GWidget s m ()
 addComments tid = do
     comments               <- lift $ loadComments (Just tid)
-    cid                    <- lift $ getNextCommentId comments
     ((res, form), enctype) <- lift $ runFormMonadPost commentForm
 
-    handleForm res tid cid
+    handleForm res tid
     addStyling
     [hamlet|
         <div .yesod_comments>
@@ -66,10 +65,9 @@ addCommentsAuth tid = do
                 return (True, toSinglePiece uid, uname, email)
 
     comments               <- lift $ loadComments (Just tid)
-    cid                    <- lift $ getNextCommentId comments
     ((res, form), enctype) <- lift $ runFormMonadPost $ commentFormAuth uid username email
 
-    handleForm res tid cid
+    handleForm res tid
     addStyling
     [hamlet|
         <div .yesod_comments>
@@ -110,13 +108,12 @@ addStyling = addCassius [cassius|
 handleForm :: YesodComments m
            => FormResult CommentForm
            -> ThreadId
-           -> CommentId
            -> GWidget s m ()
-handleForm res tid cid = case res of
+handleForm res tid = case res of
     FormMissing    -> return ()
     FormFailure _  -> return ()
     FormSuccess cf -> lift $ do
-        comment <- commentFromForm tid cid cf
+        comment <- commentFromForm tid cf
         matches <- applyFilters commentFilters comment
         if matches
             then setMessage "comment dropped. matched filters."
