@@ -22,7 +22,6 @@ module Yesod.Comments
 
 import Yesod
 import Yesod.Comments.Core
-import Yesod.Comments.Filters (applyFilters)
 import Yesod.Helpers.Auth
 
 -- | Comments that anyone can enter anonymously

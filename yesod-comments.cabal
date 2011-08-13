@@ -28,8 +28,10 @@ library
                , yesod-auth    >= 0.4   && < 0.5
                , yesod-goodies >= 0.0.3 && < 0.1
                , persistent    >= 0.5   && < 0.6
+               , template-haskell
                , directory
                , time
+               , old-locale
 
   ghc-options: -Wall
   
