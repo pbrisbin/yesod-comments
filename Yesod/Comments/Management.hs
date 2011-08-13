@@ -11,8 +11,8 @@ import Yesod
 import Yesod.Helpers.Auth
 import Yesod.Comments.Core
 import Yesod.Goodies.Markdown
-import Control.Monad (forM)
-import Data.List (nub)
+import Control.Monad (forM, unless)
+import Data.List (nub, sort)
 import Data.Time (UTCTime, formatTime)
 import System.Locale (defaultTimeLocale, rfc822DateFormat)
 import Language.Haskell.TH.Syntax hiding (lift)
@@ -50,8 +50,7 @@ getOverviewR = do
             |]
 
 getViewR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getViewR tid cid = withUserComment tid cid $ \comment -> do
-    requireUserComment comment
+getViewR tid cid = withUserComment tid cid $ \comment ->
     defaultLayout $ do
         setTitle "View comment"
         addStyling
@@ -121,8 +120,7 @@ getThreadedComments = do
 
     let comments = concat comments'
 
-    -- for each unique thread
-    forM (nub $ map threadId comments) $ \tid ->
+    forM (sort . nub $ map threadId comments) $ \tid ->
         return $ (tid, filter ((== tid) . threadId) comments)
 
 showThreadedComments :: (YesodAuth m, YesodComments m) => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
@@ -148,18 +146,6 @@ updateLinks (Comment tid cid _ _ _ _ _ _ )= do
                 <a href=@{tm $ DeleteR tid cid}>Delete
         |]
 
--- | Require auth and require that the comment being edited/deleted was
---   actually entered by the user that's logged in.
-requireUserComment :: (YesodAuth m, YesodComments m)
-                   => Comment
-                   -> GHandler s m ()
-requireUserComment comment = do
-    _     <- requireAuthId
-    check <- isCommentingUser comment
-    if check
-        then return ()
-        else permissionDenied "you can only manage your own comments"
-
 -- | Find a comment by thread/id, ensure it's the logged in user's
 --   comment and execute and action on it. Gives notFound or
 --   permissionDenied in failing cases.
@@ -171,5 +157,10 @@ withUserComment :: (YesodAuth m, YesodComments m)
 withUserComment tid cid f = do
     mcomment <- getComment tid cid
     case mcomment of
-        Just comment -> requireUserComment comment >> f comment
-        Nothing      -> notFound
+        Just comment -> do
+            _     <- requireAuthId
+            check <- isCommentingUser comment
+            unless check $ permissionDenied "you can only manage your own comments"
+            f comment
+
+        Nothing -> notFound
