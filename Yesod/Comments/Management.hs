@@ -34,7 +34,7 @@ mkYesodSub "CommentsAdmin"
 
 getOverviewR :: (YesodAuth m, YesodComments m) => GHandler CommentsAdmin m RepHtml
 getOverviewR = do
-    requireAuthId
+    _       <- requireAuthId
     threads <- getThreadedComments
     defaultLayout $ do
         setTitle "Comments administration"
@@ -48,6 +48,69 @@ getOverviewR = do
                     $forall thread <- threads
                          ^{showThreadedComments thread}
             |]
+
+getViewR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+getViewR tid cid = withUserComment tid cid $ \comment -> do
+    requireUserComment comment
+    defaultLayout $ do
+        setTitle "View comment"
+        addStyling
+        [hamlet|
+            <h1>View comment
+            <article .yesod_comments_view_comment>
+                <table>
+                    <tr>
+                        <th>Thread:
+                        <td>#{tid}
+                    <tr>
+                        <th>Comment Id:
+                        <td>#{cid}
+                    <tr>
+                        <th>Source IP:
+                        <td>#{ipAddress comment}
+                    <tr>
+                        <th>Time stamp:
+                        <td>#{formatTimeStamp $ timeStamp comment}
+
+                <p>
+                    <strong>Comment:
+
+                <blockquote>
+                    #{markdownToHtml $ content comment}
+
+                ^{updateLinks comment}
+            |]
+
+    where
+        formatTimeStamp :: UTCTime -> String -- todo: make my own format
+        formatTimeStamp = formatTime defaultTimeLocale rfc822DateFormat
+
+getEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+getEditR tid cid = withUserComment tid cid $ \comment -> do
+    tm <- getRouteToMaster
+    ((res, form), enctype) <- runFormMonadPost $ commentFormEdit comment
+    defaultLayout $ do
+        setTitle "Edit comment"
+        handleFormEdit (tm OverviewR) res comment
+        addStyling
+        [hamlet|
+            <h1>Edit comment
+            <article .yesod_comments_edit_comment>
+                <h3>Update comment
+                <div .yesod_comment_input>
+                    <form enctype="#{enctype}" method="post">^{form}
+                    <p .helptext>Comments are parsed as pandoc-style markdown
+        |]
+
+postEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+postEditR = getEditR
+
+getDeleteR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+getDeleteR tid cid = withUserComment tid cid $ \comment -> do
+    tm <- getRouteToMaster
+    deleteComment comment
+    setMessage "comment deleted."
+    redirect RedirectTemporary $ tm OverviewR
 
 getThreadedComments :: (YesodAuth m, YesodComments m) => GHandler s m [(ThreadId, [Comment])]
 getThreadedComments = do
@@ -72,81 +135,6 @@ showThreadedComments (tid, comments) = [hamlet|
                 ^{updateLinks comment}
     |]
 
-getViewR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getViewR tid cid = do
-    mcomment <- getComment tid cid
-    case mcomment of
-        Just comment -> defaultLayout $ do
-            setTitle "View comment"
-            addStyling
-            [hamlet|
-                <h1>View comment
-                <article .yesod_comments_view_comment>
-                    <table>
-                        <tr>
-                            <th>Thread:
-                            <td>#{tid}
-                        <tr>
-                            <th>Comment Id:
-                            <td>#{cid}
-                        <tr>
-                            <th>Source IP:
-                            <td>#{ipAddress comment}
-                        <tr>
-                            <th>Time stamp:
-                            <td>#{formatTimeStamp $ timeStamp comment}
-
-                    <p>
-                        <strong>Comment:
-
-                    <blockquote>
-                        #{markdownToHtml $ content comment}
-
-                    ^{updateLinks comment}
-                |]
-
-        _ -> notFound
-
-    where
-        formatTimeStamp :: UTCTime -> String -- todo: make my own format
-        formatTimeStamp = formatTime defaultTimeLocale rfc822DateFormat
-
-getEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getEditR tid cid = do
-    mcomment <- getComment tid cid
-    case mcomment of
-        Just comment -> do
-            tm <- getRouteToMaster
-            ((res, form), enctype) <- runFormMonadPost $ commentFormEdit comment
-            defaultLayout $ do
-                setTitle "Edit comment"
-                handleFormEdit (tm OverviewR) res comment
-                addStyling
-                [hamlet|
-                    <h1>Edit comment
-                    <article .yesod_comments_edit_comment>
-                        <h3>Update comment
-                        <div .yesod_comment_input>
-                            <form enctype="#{enctype}" method="post">^{form}
-                            <p .helptext>Comments are parsed as pandoc-style markdown
-                |]
-
-postEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-postEditR = getEditR
-
-getDeleteR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getDeleteR tid cid = do
-    mcomment <- getComment tid cid
-    case mcomment of
-        Just comment -> do
-            requireUserComment comment
-            tm <- getRouteToMaster
-            deleteComment comment
-            setMessage "comment deleted."
-            redirect RedirectTemporary $ tm OverviewR
-
-        _ -> notFound
-
 updateLinks :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
 updateLinks (Comment tid cid _ _ _ _ _ _ )= do
     tm <- lift $ getRouteToMaster
@@ -170,4 +158,18 @@ requireUserComment comment = do
     check <- isCommentingUser comment
     if check
         then return ()
-        else permissionDenied "you can only manage your own comment"
+        else permissionDenied "you can only manage your own comments"
+
+-- | Find a comment by thread/id, ensure it's the logged in user's
+--   comment and execute and action on it. Gives notFound or
+--   permissionDenied in failing cases.
+withUserComment :: (YesodAuth m, YesodComments m)
+                => ThreadId
+                -> CommentId
+                -> (Comment-> GHandler s m a)
+                -> GHandler s m a
+withUserComment tid cid f = do
+    mcomment <- getComment tid cid
+    case mcomment of
+        Just comment -> requireUserComment comment >> f comment
+        Nothing      -> notFound
