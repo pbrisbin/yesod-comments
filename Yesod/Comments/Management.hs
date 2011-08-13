@@ -12,6 +12,7 @@ import Yesod.Helpers.Auth
 import Yesod.Comments.Core
 import Yesod.Goodies.Markdown
 import Control.Monad (forM)
+import Data.List (nub)
 import Data.Time (UTCTime, formatTime)
 import System.Locale (defaultTimeLocale, rfc822DateFormat)
 import Language.Haskell.TH.Syntax hiding (lift)
@@ -34,18 +35,42 @@ mkYesodSub "CommentsAdmin"
 getOverviewR :: (YesodAuth m, YesodComments m) => GHandler CommentsAdmin m RepHtml
 getOverviewR = do
     requireAuthId
-    comments <- getUsersComments
+    threads <- getThreadedComments
     defaultLayout $ do
         setTitle "Comments administration"
         addStyling
         [hamlet|
             <h1>Comments overview
             <article .yesod_comments_overview>
-                $forall comment <- comments
-                    <div .yesod_comments_overview_comment>
-                        ^{showCommentAuth comment}
-                        ^{updateLinks comment}
+                $if null threads
+                    <p>No comments found.
+                $else
+                    $forall thread <- threads
+                         ^{showThreadedComments thread}
             |]
+
+getThreadedComments :: (YesodAuth m, YesodComments m) => GHandler s m [(ThreadId, [Comment])]
+getThreadedComments = do
+    allComments <- loadComments Nothing
+    comments' <- forM allComments $ \comment -> do
+        check <- isCommentingUser comment
+        return $ if check then [comment] else []
+
+    let comments = concat comments'
+
+    -- for each unique thread
+    forM (nub $ map threadId comments) $ \tid ->
+        return $ (tid, filter ((== tid) . threadId) comments)
+
+showThreadedComments :: (YesodAuth m, YesodComments m) => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
+showThreadedComments (tid, comments) = [hamlet|
+    <div .yesod_comments_overview_thread>
+        <h3>#{tid}
+        $forall comment <- comments
+            <div .yesod_comments_overview_comment>
+                ^{showCommentAuth comment}
+                ^{updateLinks comment}
+    |]
 
 getViewR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 getViewR tid cid = do
@@ -121,15 +146,6 @@ getDeleteR tid cid = do
             redirect RedirectTemporary $ tm OverviewR
 
         _ -> notFound
-
-getUsersComments :: (YesodAuth m, YesodComments m) => GHandler s m [Comment]
-getUsersComments = do
-    comments  <- loadComments Nothing
-    comments' <- forM comments $ \comment -> do
-        check <- isCommentingUser comment
-        if check then return [comment] else return []
-
-    return $ concat comments'
 
 updateLinks :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
 updateLinks (Comment tid cid _ _ _ _ _ _ )= do
