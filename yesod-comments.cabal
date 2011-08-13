@@ -1,5 +1,5 @@
 name:                yesod-comments
-version:             0.3.4.1
+version:             0.4.0
 synopsis:            A generic comments interface for a Yesod application
 description:         A generic comments interface for a Yesod application
 homepage:            http://github.com/pbrisbin/yesod-comments
@@ -16,7 +16,7 @@ library
   exposed-modules: Yesod.Comments
                  , Yesod.Comments.Core
                  , Yesod.Comments.Storage
-                 , Yesod.Comments.Filters
+                 , Yesod.Comments.Management
   
   -- Packages needed in order to build this package.
   build-depends: base          >= 4     && < 5
@@ -30,8 +30,6 @@ library
                , persistent    >= 0.5   && < 0.6
                , directory
                , time
-
-
 
   ghc-options: -Wall
   

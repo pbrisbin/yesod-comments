@@ -57,10 +57,6 @@ class Yesod m => YesodComments m where
     -- | Load all comments, possibly filtered to a single thread.
     loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
 
-    -- | See "Yesod.Comments.Filters"
-    commentFilters :: [(Comment -> GHandler s m Bool)]
-    commentFilters = []
-
     -- | if using Auth, provide the function to get from a user id to 
     --   the string to use as the commenter's username. This should 
     --   return something friendlier than just a conversion to 'String'

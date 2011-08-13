@@ -113,13 +113,8 @@ handleForm res tid = case res of
     FormMissing    -> return ()
     FormFailure _  -> return ()
     FormSuccess cf -> lift $ do
-        comment <- commentFromForm tid cf
-        matches <- applyFilters commentFilters comment
-        if matches
-            then setMessage "comment dropped. matched filters."
-            else do
-                storeComment comment
-                setMessage "comment added."
+        storeComment =<< commentFromForm tid cf
+        setMessage "comment added."
         redirectCurrentRoute
 
     where
