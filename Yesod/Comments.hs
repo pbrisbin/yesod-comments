@@ -86,47 +86,6 @@ addCommentsAuth tid = do
                     <div .yesod_comment>^{showCommentAuth comment}
     |]
 
-
--- | Add styling common to the auth and non-auth forms
-addStyling :: Yesod m => GWidget s m ()
-addStyling = addCassius [cassius|
-    .yesod_comment_input th
-        text-align: left
-        vertical-align: top
-    .yesod_comment_input textarea
-        height: 10ex
-        width: 50ex
-    .yesod_comment_avatar_input, .yesod_comment_avatar_list
-        float: left
-    .yesod_comment_avatar_input
-        margin-right: 5px
-    .yesod_comment_avatar_list
-        margin-right: 3px
-    |]
-
--- | Handle the posted form and actually insert the comment
-handleForm :: YesodComments m
-           => FormResult CommentForm
-           -> ThreadId
-           -> GWidget s m ()
-handleForm res tid = case res of
-    FormMissing    -> return ()
-    FormFailure _  -> return ()
-    FormSuccess cf -> lift $ do
-        storeComment =<< commentFromForm tid cf
-        setMessage "comment added."
-        redirectCurrentRoute
-
-    where
-        -- | Redirect back to the current route after a POST request
-        redirectCurrentRoute :: Yesod m => GHandler s m ()
-        redirectCurrentRoute = do
-            tm <- getRouteToMaster
-            mr <- getCurrentRoute
-            case mr of
-                Just r  -> redirect RedirectTemporary $ tm r
-                Nothing -> notFound
-
 helper :: Int -> String
 helper 0 = "no comments"
 helper 1 = "1 comment"

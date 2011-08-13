@@ -20,6 +20,10 @@ module Yesod.Comments.Core
     , commentFromForm
     , commentForm
     , commentFormAuth
+    , commentFormEdit
+    , handleForm
+    , handleFormEdit
+    , addStyling
     , showComment
     , showCommentAuth
     , getNextCommentId
@@ -150,6 +154,17 @@ commentFormAuth user username email = do
                     <input type="submit" value="Add comment">
         |])
 
+commentFormEdit :: Comment -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentFormEdit comment = do
+    (comment, fiComment) <- markdownField "comment:" (Just $ content comment)
+    return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> comment <*> FormSuccess True, [hamlet|
+        <table>
+            ^{fieldRow fiComment}
+            <tr>
+                <td>&nbsp;
+                <td colspan="2">
+                    <input type="submit" value="Update comment">
+        |])
 
 fieldRow :: FieldInfo s m -> GWidget s m ()
 fieldRow fi = [hamlet|
@@ -168,6 +183,56 @@ fieldRow fi = [hamlet|
 
 clazz :: FieldInfo s m -> String
 clazz fi = if fiRequired fi then "required" else "optional"
+
+addStyling :: Yesod m => GWidget s m ()
+addStyling = addCassius [cassius|
+    .yesod_comment_input th
+        text-align: left
+        vertical-align: top
+    .yesod_comment_input textarea
+        height: 10ex
+        width: 50ex
+    .yesod_comment_avatar_input, .yesod_comment_avatar_list
+        float: left
+    .yesod_comment_avatar_input
+        margin-right: 5px
+    .yesod_comment_avatar_list
+        margin-right: 3px
+    |]
+
+handleForm :: YesodComments m
+           => FormResult CommentForm
+           -> ThreadId
+           -> GWidget s m ()
+handleForm res tid = case res of
+    FormMissing    -> return ()
+    FormFailure _  -> return ()
+    FormSuccess cf -> lift $ do
+        storeComment =<< commentFromForm tid cf
+        setMessage "comment added."
+        redirectCurrentRoute
+
+handleFormEdit :: YesodComments m
+               => Route m
+               -> FormResult CommentForm
+               -> Comment
+               -> GWidget s m ()
+handleFormEdit r res comment = case res of
+    FormMissing    -> return ()
+    FormFailure _  -> return ()
+    FormSuccess cf -> lift $ do
+        updateComment comment $ comment { content = formComment cf }
+        setMessage "comment updateded."
+        redirect RedirectTemporary r
+
+-- | Redirect back to the current route after a POST request
+redirectCurrentRoute :: Yesod m => GHandler s m ()
+redirectCurrentRoute = do
+    tm <- getRouteToMaster
+    mr <- getCurrentRoute
+    case mr of
+        Just r  -> redirect RedirectTemporary $ tm r
+        Nothing -> notFound
 
 -- | Show a single comment
 showComment :: Yesod m => Comment -> GWidget s m ()
