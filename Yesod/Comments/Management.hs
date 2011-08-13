@@ -37,11 +37,14 @@ getOverviewR = do
     comments <- getUsersComments
     defaultLayout $ do
         setTitle "Comments administration"
+        addStyling
         [hamlet|
+            <h1>Comments overview
             <article .yesod_comments_overview>
                 $forall comment <- comments
-                   ^{showCommentAuth comment}
-                   ^{updateLinks comment}
+                    <div .yesod_comments_overview_comment>
+                        ^{showCommentAuth comment}
+                        ^{updateLinks comment}
             |]
 
 getViewR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
@@ -50,10 +53,17 @@ getViewR tid cid = do
     case mcomment of
         Just comment -> defaultLayout $ do
             setTitle "View comment"
+            addStyling
             [hamlet|
-                <h1>#{tid} - ##{cid}
-                <div .yesod_comments_view_comment>
+                <h1>View comment
+                <article .yesod_comments_view_comment>
                     <table>
+                        <tr>
+                            <th>Thread:
+                            <td>#{tid}
+                        <tr>
+                            <th>Comment Id:
+                            <td>#{cid}
                         <tr>
                             <th>Source IP:
                             <td>#{ipAddress comment}
@@ -88,7 +98,8 @@ getEditR tid cid = do
                 handleFormEdit (tm OverviewR) res comment
                 addStyling
                 [hamlet|
-                    <div .yesod_comments>
+                    <h1>Edit comment
+                    <article .yesod_comments_edit_comment>
                         <h3>Update comment
                         <div .yesod_comment_input>
                             <form enctype="#{enctype}" method="post">^{form}
@@ -139,7 +150,7 @@ requireUserComment :: (YesodAuth m, YesodComments m)
                    => Comment
                    -> GHandler s m ()
 requireUserComment comment = do
-    requireAuthId
+    _     <- requireAuthId
     check <- isCommentingUser comment
     if check
         then return ()
