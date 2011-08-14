@@ -297,5 +297,5 @@ isCommentingUser :: (YesodAuth m, YesodComments m)
 isCommentingUser comment = do
     muid <- maybeAuthId
     case muid of
-        Just uid -> return $ toSinglePiece uid == userName comment
+        Just uid -> return $ isAuth comment && toSinglePiece uid == userName comment
         _        -> return False
