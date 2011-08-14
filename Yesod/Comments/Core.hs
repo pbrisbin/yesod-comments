@@ -137,8 +137,8 @@ commentFormAuth :: T.Text -- ^ text version of uid
 commentFormAuth user username email = do
     let img = gravatarImg email defaultOptions { gDefault = Just MM }
 
-    (comment, fiComment) <- markdownField "comment:" Nothing
-    return (CommentForm <$> FormSuccess user <*> FormSuccess email <*> comment <*> FormSuccess True, [hamlet|
+    (fComment, fiComment) <- markdownField "comment:" Nothing
+    return (CommentForm <$> FormSuccess user <*> FormSuccess email <*> fComment <*> FormSuccess True, [hamlet|
         <div .yesod_comment_avatar_input>
             <a title="change your profile picture at gravatar" href="http://gravatar.com/emails/">
                 <img src="#{img}">
@@ -158,8 +158,8 @@ commentFormAuth user username email = do
 -- | The comment form used in the management edit page.
 commentFormEdit :: Comment -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentFormEdit comment = do
-    (comment, fiComment) <- markdownField "comment:" (Just $ content comment)
-    return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> comment <*> FormSuccess True, [hamlet|
+    (fComment, fiComment) <- markdownField "comment:" (Just $ content comment)
+    return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> fComment <*> FormSuccess True, [hamlet|
         <table>
             ^{fieldRow fiComment}
             <tr>
