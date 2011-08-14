@@ -5,7 +5,11 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
-module Yesod.Comments.Management where
+module Yesod.Comments.Management
+    ( CommentsAdmin
+    , CommentsAdminRoute(..)
+    , getCommentsAdmin
+    ) where
 
 import Yesod
 import Yesod.Helpers.Auth
