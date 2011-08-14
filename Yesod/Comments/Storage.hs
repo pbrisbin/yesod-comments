@@ -27,7 +27,7 @@ module Yesod.Comments.Storage
     , loadCommentsPersist
     , migrateComments
     -- * TODO
-    -- Add more
+    -- $todo
     ) where
 
 import Yesod
@@ -104,3 +104,8 @@ deleteCommentPersist c = return . const () =<< runDB (deleteBy $ UniqueSqlCommen
 loadCommentsPersist :: (YesodPersist m, PersistBackend (YesodDB m (GGHandler s m IO))) => Maybe ThreadId -> GHandler s m [Comment]
 loadCommentsPersist (Just tid) = return . fmap (fromSqlComment . snd) =<< runDB (selectList [SqlCommentThreadIdEq tid] [SqlCommentCommentIdAsc] 0 0)
 loadCommentsPersist Nothing    = return . fmap (fromSqlComment . snd) =<< runDB (selectList []                         [SqlCommentCommentIdAsc] 0 0)
+
+-- $todo
+--
+-- Add more storage options...
+--

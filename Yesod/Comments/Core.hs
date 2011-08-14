@@ -47,10 +47,10 @@ type CommentId = Int
 
 class Yesod m => YesodComments m where
     -- | Find a specific comment
-    getComment    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+    getComment :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
 
     -- | Store a new comment
-    storeComment  :: Comment -> GHandler s m ()
+    storeComment :: Comment -> GHandler s m ()
 
     -- | Update a comment
     updateComment :: Comment -> Comment -> GHandler s m ()
@@ -59,15 +59,16 @@ class Yesod m => YesodComments m where
     deleteComment :: Comment -> GHandler s m ()
 
     -- | Load all comments, possibly filtered to a single thread.
-    loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
+    loadComments :: Maybe ThreadId -> GHandler s m [Comment]
 
-    -- | if using Auth, provide the function to get from a user id to 
+    -- | If using Auth, provide the function to get from a user id to 
     --   the string to use as the commenter's username. This should 
-    --   return something friendlier than just a conversion to 'String'
+    --   return something friendly probably pulled from the user's
+    --   profile on your site.
     displayUser :: AuthId m -> GHandler s m T.Text
     displayUser _ = return "" -- fixme: use toSinglePiece in new auth pkg
 
-    -- | if using Auth, provide the function to get form a user id to 
+    -- | If using Auth, provide the function to get from a user id to 
     --   the string to use as the commenter's email.
     displayEmail :: AuthId m -> GHandler s m T.Text
     displayEmail _ = return ""
@@ -154,6 +155,7 @@ commentFormAuth user username email = do
                     <input type="submit" value="Add comment">
         |])
 
+-- | The comment form used in the management edit page.
 commentFormEdit :: Comment -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
 commentFormEdit comment = do
     (comment, fiComment) <- markdownField "comment:" (Just $ content comment)
@@ -184,6 +186,7 @@ fieldRow fi = [hamlet|
 clazz :: FieldInfo s m -> String
 clazz fi = if fiRequired fi then "required" else "optional"
 
+-- | Add some cassius that is common to all the yesod-comments pages
 addStyling :: Yesod m => GWidget s m ()
 addStyling = addCassius [cassius|
     .yesod_comment_input th
@@ -200,6 +203,7 @@ addStyling = addCassius [cassius|
         margin-right: 3px
     |]
 
+-- | POST the form and insert the new comment
 handleForm :: YesodComments m
            => FormResult CommentForm
            -> ThreadId
@@ -212,6 +216,7 @@ handleForm res tid = case res of
         setMessage "comment added."
         redirectCurrentRoute
 
+-- | POST the form and update an existing comment
 handleFormEdit :: YesodComments m
                => Route m
                -> FormResult CommentForm
@@ -273,6 +278,9 @@ showHelper comment (username, email) = do
             #{markdownToHtml $ content comment}
         |]
 
+-- | As the final step before insert, this is called to get the next
+--   comment id for the thread. super-high concurrency is probably not
+--   well-supported here...
 getNextCommentId :: YesodComments m => ThreadId -> GHandler s m CommentId
 getNextCommentId tid = go =<< loadComments (Just tid)
 
@@ -281,6 +289,8 @@ getNextCommentId tid = go =<< loadComments (Just tid)
         go [] = return 1
         go cs = return $ maximum (map commentId cs) + 1
 
+-- | Note: this function does not requireAuthId so a non-logged in user
+--   just returns false.
 isCommentingUser :: (YesodAuth m, YesodComments m)
                  => Comment
                  -> GHandler s m Bool

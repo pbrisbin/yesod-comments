@@ -5,6 +5,32 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+-------------------------------------------------------------------------------
+-- |
+-- Module        : Yesod.Comments.Management
+-- Copyright     : Patrick Brisbin
+-- License       : as-is
+--
+-- Maintainer    : Patrick Brisbin <me@pbrisbin.com>
+-- Stability     : unstable
+-- Portability   : unportable
+--
+-- This module allows for self-management of comments by any
+-- authenticating commenter on your site.
+--
+-- The use, add a route like so:
+--
+-- > /comments CommentsAdminR CommentsAdmin getCommentsAdmin
+--
+-- Then place a link somewhere to @CommentsAdminR OverviewR@.
+--
+-- The overview page will show all of the comments (grouped by thread)
+-- that the currently logged in user has left on the site along with
+-- links to view more details, edit the comment content, or delete the
+-- comment entirely.
+--
+-------------------------------------------------------------------------------
+
 module Yesod.Comments.Management
     ( CommentsAdmin
     , CommentsAdminRoute(..)
