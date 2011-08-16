@@ -30,7 +30,6 @@
 -- comment entirely.
 --
 -------------------------------------------------------------------------------
-
 module Yesod.Comments.Management
     ( CommentsAdmin
     , CommentsAdminRoute(..)
@@ -144,24 +143,34 @@ getDeleteR tid cid = withUserComment tid cid $ \comment -> do
 getThreadedComments :: (YesodAuth m, YesodComments m) => GHandler s m [(ThreadId, [Comment])]
 getThreadedComments = do
     allComments <- loadComments Nothing
-    comments' <- forM allComments $ \comment -> do
+    allThreads  <- forM allComments $ \comment -> do
         check <- isCommentingUser comment
-        return $ if check then [comment] else []
+        return $ if check then [threadId comment] else []
 
-    let comments = concat comments'
-
-    forM (sort . nub $ map threadId comments) $ \tid ->
-        return $ (tid, filter ((== tid) . threadId) comments)
+    forM (sort . nub $ concat allThreads) $ \tid ->
+        return (tid, filter ((== tid) . threadId) allComments)
 
 showThreadedComments :: (YesodAuth m, YesodComments m) => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
 showThreadedComments (tid, comments) = [hamlet|
     <div .yesod_comments_overview_thread>
         <h3>#{tid}
         $forall comment <- comments
-            <div .yesod_comments_overview_comment>
-                ^{showCommentAuth comment}
-                ^{updateLinks comment}
+            ^{showComment comment}
     |]
+
+    where
+        showComment :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
+        showComment comment = do
+            check <- lift $ isCommentingUser comment
+            [hamlet|
+                $if check
+                    <div .yesod_comments_overview_comment_yours>
+                        ^{showCommentAuth comment}
+                        ^{updateLinks comment}
+                $else
+                    <div .yesod_comments_overview_comment>
+                        ^{showCommentAuth comment}
+                |]
 
 updateLinks :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
 updateLinks (Comment tid cid _ _ _ _ _ _ )= do
