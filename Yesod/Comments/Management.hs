@@ -37,7 +37,7 @@ module Yesod.Comments.Management
     ) where
 
 import Yesod
-import Yesod.Helpers.Auth
+import Yesod.Auth
 import Yesod.Comments.Core
 import Yesod.Goodies.Markdown
 import Control.Monad (forM, unless)
@@ -68,7 +68,7 @@ getOverviewR = do
     defaultLayout $ do
         setTitle "Comments administration"
         addStyling
-        [hamlet|
+        [whamlet|
             <h1>Comments overview
             <article .yesod_comments_overview>
                 $if null threads
@@ -83,7 +83,7 @@ getViewR tid cid = withUserComment tid cid $ \comment ->
     defaultLayout $ do
         setTitle "View comment"
         addStyling
-        [hamlet|
+        [whamlet|
             <h1>View comment
             <article .yesod_comments_view_comment>
                 <table>
@@ -116,12 +116,12 @@ getViewR tid cid = withUserComment tid cid $ \comment ->
 getEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 getEditR tid cid = withUserComment tid cid $ \comment -> do
     tm <- getRouteToMaster
-    ((res, form), enctype) <- runFormMonadPost $ commentFormEdit comment
+    ((res, form), enctype) <- runFormPost (const $ commentFormEdit comment)
     defaultLayout $ do
         setTitle "Edit comment"
         handleFormEdit (tm OverviewR) res comment
         addStyling
-        [hamlet|
+        [whamlet|
             <h1>Edit comment
             <article .yesod_comments_edit_comment>
                 <h3>Update comment
@@ -151,7 +151,7 @@ getThreadedComments = do
         return (tid, filter ((== tid) . threadId) allComments)
 
 showThreadedComments :: (YesodAuth m, YesodComments m) => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
-showThreadedComments (tid, comments) = [hamlet|
+showThreadedComments (tid, comments) = [whamlet|
     <div .yesod_comments_overview_thread>
         <h3>#{tid}
         $forall comment <- comments
@@ -162,7 +162,7 @@ showThreadedComments (tid, comments) = [hamlet|
         showComment :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
         showComment comment = do
             check <- lift $ isCommentingUser comment
-            [hamlet|
+            [whamlet|
                 $if check
                     <div .yesod_comments_overview_comment_yours>
                         ^{showCommentAuth comment}
@@ -175,7 +175,7 @@ showThreadedComments (tid, comments) = [hamlet|
 updateLinks :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
 updateLinks (Comment tid cid _ _ _ _ _ _ )= do
     tm <- lift $ getRouteToMaster
-    [hamlet|
+    [whamlet|
         <div .yesod_comments_update_links>
             <p>
                 <a href=@{tm $ ViewR tid cid}>View

@@ -21,20 +21,20 @@ module Yesod.Comments
     ) where
 
 import Yesod
+import Yesod.Auth
 import Yesod.Comments.Core
-import Yesod.Helpers.Auth
 
 -- | Comments that anyone can enter anonymously
-addComments :: YesodComments m 
+addComments :: (RenderMessage m FormMessage, YesodComments m)
             => ThreadId -- ^ the thread you're adding comments to
             -> GWidget s m ()
 addComments tid = do
     comments               <- lift $ loadComments (Just tid)
-    ((res, form), enctype) <- lift $ runFormMonadPost commentForm
+    ((res, form), enctype) <- lift $ runFormPost (const commentForm)
 
     handleForm res tid
     addStyling
-    [hamlet|
+    [whamlet|
         <div .yesod_comments>
             <h4>Add a comment:
             <div .yesod_comment_input>
@@ -50,7 +50,7 @@ addComments tid = do
     |]
 
 -- | Comments that require authentication
-addCommentsAuth :: (YesodAuth m, YesodComments m)
+addCommentsAuth :: (RenderMessage m FormMessage, YesodAuth m, YesodComments m)
                 => ThreadId -- ^ the thread you're adding comments to
                 -> GWidget s m ()
 addCommentsAuth tid = do
@@ -64,11 +64,11 @@ addCommentsAuth tid = do
                 return (True, toSinglePiece uid, uname, email)
 
     comments               <- lift $ loadComments (Just tid)
-    ((res, form), enctype) <- lift $ runFormMonadPost $ commentFormAuth uid username email
+    ((res, form), enctype) <- lift $ runFormPost (const $ commentFormAuth uid username email)
 
     handleForm res tid
     addStyling
-    [hamlet|
+    [whamlet|
         <div .yesod_comments>
             $if isAuthenticated
                 <h4>Add a comment:
@@ -96,5 +96,5 @@ login = do
     lift $ setUltDest' -- so we come back here after login
     mroute <- lift $ fmap authRoute getYesod
     case mroute of
-        Just r  -> [hamlet|<a href="@{r}">log in|]
-        Nothing -> [hamlet|log in|]
+        Just r  -> [whamlet|<a href="@{r}">log in|]
+        Nothing -> [whamlet|log in|]

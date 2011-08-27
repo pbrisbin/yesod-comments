@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts  #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments.Core
@@ -31,8 +32,8 @@ module Yesod.Comments.Core
     ) where
 
 import Yesod
-import Yesod.Form.Core
-import Yesod.Helpers.Auth
+import Yesod.Auth
+import Yesod.Form
 import Yesod.Goodies.Gravatar
 import Yesod.Goodies.Markdown
 import Yesod.Goodies.Time
@@ -112,12 +113,12 @@ commentFromForm tid cf = do
         }
 
 -- | The comment form itself
-commentForm :: GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentForm :: RenderMessage m FormMessage => Form s m (FormResult CommentForm, GWidget s m ())
 commentForm = do
-    (user   , fiUser   ) <- stringField   "name:"    Nothing
-    (email  , fiEmail  ) <- emailField    "email:"   Nothing
-    (comment, fiComment) <- markdownField "comment:" Nothing
-    return (CommentForm <$> user <*> email <*> comment <*> FormSuccess False, [hamlet|
+    (user   , fiUser   ) <- mreq textField     "name:"    Nothing
+    (email  , fiEmail  ) <- mreq emailField    "email:"   Nothing
+    (comment, fiComment) <- mreq markdownField "comment:" Nothing
+    return (CommentForm <$> user <*> email <*> comment <*> FormSuccess False, [whamlet|
         <table>
             ^{fieldRow fiUser}
             ^{fieldRow fiEmail}
@@ -130,15 +131,16 @@ commentForm = do
 
 -- | The comment form if using authentication (uid is hidden and display
 --   name is shown)
-commentFormAuth :: T.Text -- ^ text version of uid
+commentFormAuth :: RenderMessage m FormMessage
+                => T.Text -- ^ text version of uid
                 -> T.Text -- ^ friendly name
                 -> T.Text -- ^ email
-                -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
+                -> Form s m (FormResult CommentForm, GWidget s m ())
 commentFormAuth user username email = do
     let img = gravatarImg email defaultOptions { gDefault = Just MM }
 
-    (fComment, fiComment) <- markdownField "comment:" Nothing
-    return (CommentForm <$> FormSuccess user <*> FormSuccess email <*> fComment <*> FormSuccess True, [hamlet|
+    (fComment, fiComment) <- mreq markdownField "comment:" Nothing
+    return (CommentForm <$> FormSuccess user <*> FormSuccess email <*> fComment <*> FormSuccess True, [whamlet|
         <div .yesod_comment_avatar_input>
             <a title="change your profile picture at gravatar" href="http://gravatar.com/emails/">
                 <img src="#{img}">
@@ -156,10 +158,12 @@ commentFormAuth user username email = do
         |])
 
 -- | The comment form used in the management edit page.
-commentFormEdit :: Comment -> GFormMonad s m (FormResult CommentForm, GWidget s m ())
+commentFormEdit :: RenderMessage m FormMessage
+                => Comment
+                -> Form s m (FormResult CommentForm, GWidget s m ())
 commentFormEdit comment = do
-    (fComment, fiComment) <- markdownField "comment:" (Just $ content comment)
-    return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> fComment <*> FormSuccess True, [hamlet|
+    (fComment, fiComment) <- mreq markdownField "comment:" (Just $ content comment)
+    return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> fComment <*> FormSuccess True, [whamlet|
         <table>
             ^{fieldRow fiComment}
             <tr>
@@ -168,23 +172,24 @@ commentFormEdit comment = do
                     <input type="submit" value="Update comment">
         |])
 
-fieldRow :: FieldInfo s m -> GWidget s m ()
-fieldRow fi = [hamlet|
-    <tr .#{clazz fi}>
+fieldRow :: FieldView s m -> GWidget s m ()
+fieldRow fv = [whamlet|
+    <tr .#{clazz fv}>
         <th>
-            <label for="#{fiIdent fi}">#{fiLabel fi}
-            <div .tooltip>#{fiTooltip fi}
+            <label for="#{fvId fv}">#{fvLabel fv}
+            $maybe tt <- fvTooltip fv
+                <div .tooltip>#{tt}
         <td>
-            ^{fiInput fi}
+            ^{fvInput fv}
         <td>
-            $maybe error <- fiErrors fi
+            $maybe error <- fvErrors fv
                 #{error}
             $nothing
                 &nbsp;
     |]
 
-clazz :: FieldInfo s m -> String
-clazz fi = if fiRequired fi then "required" else "optional"
+clazz :: FieldView s m -> String
+clazz fv = if fvRequired fv then "required" else "optional"
 
 -- | Add some cassius that is common to all the yesod-comments pages
 addStyling :: Yesod m => GWidget s m ()
