@@ -116,7 +116,7 @@ getViewR tid cid = withUserComment tid cid $ \comment ->
 getEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 getEditR tid cid = withUserComment tid cid $ \comment -> do
     tm <- getRouteToMaster
-    ((res, form), enctype) <- runFormPost (const $ commentFormEdit comment)
+    ((res, form), enctype) <- runFormPost (\fragment -> commentFormEdit fragment comment)
     defaultLayout $ do
         setTitle "Edit comment"
         handleFormEdit (tm OverviewR) res comment

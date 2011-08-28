@@ -33,7 +33,6 @@ module Yesod.Comments.Core
 
 import Yesod
 import Yesod.Auth
-import Yesod.Form
 import Yesod.Goodies.Gravatar
 import Yesod.Goodies.Markdown
 import Yesod.Goodies.Time
@@ -113,12 +112,13 @@ commentFromForm tid cf = do
         }
 
 -- | The comment form itself
-commentForm :: RenderMessage m FormMessage => Form s m (FormResult CommentForm, GWidget s m ())
-commentForm = do
+commentForm :: RenderMessage m FormMessage => Html -> Form s m (FormResult CommentForm, GWidget s m ())
+commentForm fragment = do
     (user   , fiUser   ) <- mreq textField     "name:"    Nothing
     (email  , fiEmail  ) <- mreq emailField    "email:"   Nothing
     (comment, fiComment) <- mreq markdownField "comment:" Nothing
     return (CommentForm <$> user <*> email <*> comment <*> FormSuccess False, [whamlet|
+        #{fragment}
         <table>
             ^{fieldRow fiUser}
             ^{fieldRow fiEmail}
@@ -132,15 +132,17 @@ commentForm = do
 -- | The comment form if using authentication (uid is hidden and display
 --   name is shown)
 commentFormAuth :: RenderMessage m FormMessage
-                => T.Text -- ^ text version of uid
+                => Html   -- ^ nonce input
+                -> T.Text -- ^ text version of uid
                 -> T.Text -- ^ friendly name
                 -> T.Text -- ^ email
                 -> Form s m (FormResult CommentForm, GWidget s m ())
-commentFormAuth user username email = do
+commentFormAuth fragment user username email = do
     let img = gravatarImg email defaultOptions { gDefault = Just MM }
 
     (fComment, fiComment) <- mreq markdownField "comment:" Nothing
     return (CommentForm <$> FormSuccess user <*> FormSuccess email <*> fComment <*> FormSuccess True, [whamlet|
+        #{fragment}
         <div .yesod_comment_avatar_input>
             <a title="change your profile picture at gravatar" href="http://gravatar.com/emails/">
                 <img src="#{img}">
@@ -159,11 +161,13 @@ commentFormAuth user username email = do
 
 -- | The comment form used in the management edit page.
 commentFormEdit :: RenderMessage m FormMessage
-                => Comment
+                => Html
+                -> Comment
                 -> Form s m (FormResult CommentForm, GWidget s m ())
-commentFormEdit comment = do
+commentFormEdit fragment comment = do
     (fComment, fiComment) <- mreq markdownField "comment:" (Just $ content comment)
     return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> fComment <*> FormSuccess True, [whamlet|
+        #{fragment}
         <table>
             ^{fieldRow fiComment}
             <tr>
