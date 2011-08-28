@@ -30,7 +30,7 @@ addComments :: (RenderMessage m FormMessage, YesodComments m)
             -> GWidget s m ()
 addComments tid = do
     comments               <- lift $ loadComments (Just tid)
-    ((res, form), enctype) <- lift $ runFormPost (\fragment -> commentForm fragment)
+    ((res, form), enctype) <- lift $ runFormPost commentForm
 
     handleForm res tid
     addStyling
@@ -64,7 +64,7 @@ addCommentsAuth tid = do
                 return (True, toSinglePiece uid, uname, email)
 
     comments               <- lift $ loadComments (Just tid)
-    ((res, form), enctype) <- lift $ runFormPost (\fragment -> commentFormAuth fragment uid username email)
+    ((res, form), enctype) <- lift $ runFormPost (commentFormAuth uid username email)
 
     handleForm res tid
     addStyling

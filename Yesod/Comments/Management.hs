@@ -116,7 +116,7 @@ getViewR tid cid = withUserComment tid cid $ \comment ->
 getEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 getEditR tid cid = withUserComment tid cid $ \comment -> do
     tm <- getRouteToMaster
-    ((res, form), enctype) <- runFormPost (\fragment -> commentFormEdit fragment comment)
+    ((res, form), enctype) <- runFormPost $ commentFormEdit comment
     defaultLayout $ do
         setTitle "Edit comment"
         handleFormEdit (tm OverviewR) res comment
@@ -144,8 +144,8 @@ getThreadedComments :: (YesodAuth m, YesodComments m) => GHandler s m [(ThreadId
 getThreadedComments = do
     allComments <- loadComments Nothing
     allThreads  <- forM allComments $ \comment -> do
-        check <- isCommentingUser comment
-        return $ if check then [threadId comment] else []
+        mine <- isCommentingUser comment
+        return $ if mine then [threadId comment] else []
 
     forM (sort . nub $ concat allThreads) $ \tid ->
         return (tid, filter ((== tid) . threadId) allComments)
@@ -155,15 +155,15 @@ showThreadedComments (tid, comments) = [whamlet|
     <div .yesod_comments_overview_thread>
         <h3>#{tid}
         $forall comment <- comments
-            ^{showComment comment}
+            ^{showThreadComment comment}
     |]
 
     where
-        showComment :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
-        showComment comment = do
-            check <- lift $ isCommentingUser comment
+        showThreadComment :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
+        showThreadComment comment = do
+            mine <- lift $ isCommentingUser comment
             [whamlet|
-                $if check
+                $if mine
                     <div .yesod_comments_overview_comment_yours>
                         ^{showCommentAuth comment}
                         ^{updateLinks comment}
@@ -198,8 +198,8 @@ withUserComment tid cid f = do
     case mcomment of
         Just comment -> do
             _     <- requireAuthId
-            check <- isCommentingUser comment
-            unless check $ permissionDenied "you can only manage your own comments"
+            mine <- isCommentingUser comment
+            unless mine $ permissionDenied "you can only manage your own comments"
             f comment
 
         Nothing -> notFound

@@ -132,12 +132,12 @@ commentForm fragment = do
 -- | The comment form if using authentication (uid is hidden and display
 --   name is shown)
 commentFormAuth :: RenderMessage m FormMessage
-                => Html   -- ^ nonce input
-                -> T.Text -- ^ text version of uid
+                => T.Text -- ^ text version of uid
                 -> T.Text -- ^ friendly name
                 -> T.Text -- ^ email
+                -> Html   -- ^ nonce fragment
                 -> Form s m (FormResult CommentForm, GWidget s m ())
-commentFormAuth fragment user username email = do
+commentFormAuth user username email fragment = do
     let img = gravatarImg email defaultOptions { gDefault = Just MM }
 
     (fComment, fiComment) <- mreq markdownField "comment:" Nothing
@@ -161,10 +161,10 @@ commentFormAuth fragment user username email = do
 
 -- | The comment form used in the management edit page.
 commentFormEdit :: RenderMessage m FormMessage
-                => Html
-                -> Comment
+                => Comment
+                -> Html
                 -> Form s m (FormResult CommentForm, GWidget s m ())
-commentFormEdit fragment comment = do
+commentFormEdit comment fragment = do
     (fComment, fiComment) <- mreq markdownField "comment:" (Just $ content comment)
     return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> fComment <*> FormSuccess True, [whamlet|
         #{fragment}
