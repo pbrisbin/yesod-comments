@@ -39,7 +39,7 @@ module Yesod.Comments.Management
 import Yesod
 import Yesod.Auth
 import Yesod.Comments.Core
-import Yesod.Goodies.Markdown
+import Yesod.Goodies
 import Control.Monad (forM, unless)
 import Data.List (nub, sort)
 import Data.Time (UTCTime, formatTime)

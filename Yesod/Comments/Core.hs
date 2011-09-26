@@ -33,9 +33,7 @@ module Yesod.Comments.Core
 
 import Yesod
 import Yesod.Auth
-import Yesod.Goodies.Gravatar
-import Yesod.Goodies.Markdown
-import Yesod.Goodies.Time
+import Yesod.Goodies
 import Control.Applicative ((<$>), (<*>))
 import Data.Time           (UTCTime, getCurrentTime)
 import Network.Wai         (remoteHost)
@@ -272,7 +270,7 @@ showCommentAuth comment = do
 -- | Factor out common code
 showHelper :: Yesod m => Comment -> (T.Text,T.Text) -> GWidget s m ()
 showHelper comment (username, email) = do
-    commentTimestamp <- lift . humanReadableTime $ timeStamp comment
+    commentTimestamp <- lift . liftIO . humanReadableTime $ timeStamp comment
     let anchor = "comment_" ++ show (commentId comment)
     let img    = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
     addHamlet [hamlet|

@@ -33,7 +33,7 @@ module Yesod.Comments.Storage
 
 import Yesod
 import Yesod.Comments.Core    (Comment(..), ThreadId, CommentId)
-import Yesod.Goodies.Markdown (Markdown(..))
+import Yesod.Goodies          (Markdown(..))
 import Data.Time.Clock        (UTCTime)
 import qualified Data.Text as T
 
