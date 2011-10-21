@@ -40,6 +40,7 @@ import Yesod
 import Yesod.Auth
 import Yesod.Comments.Core
 import Yesod.Goodies
+import Data.List (sortBy)
 import Control.Monad (forM, unless)
 import Data.List (nub, sort)
 import Data.Time (UTCTime, formatTime)
@@ -147,8 +148,23 @@ getThreadedComments = do
         mine <- isCommentingUser comment
         return $ if mine then [threadId comment] else []
 
-    forM (sort . nub $ concat allThreads) $ \tid ->
+    unsorted <- forM (nub $ concat allThreads) $ \tid ->
         return (tid, filter ((== tid) . threadId) allComments)
+
+    return . sortBy latest $ unsorted
+
+latest :: (ThreadId, [Comment]) -> (ThreadId, [Comment]) -> Ordering
+latest (t1, cs1) (t2,cs2) =
+    -- note the comparason is reversed so that the more recent threads
+    -- will sort first
+    case compare (latest' cs1) (latest' cs2) of
+        EQ -> compare t1 t2
+        GT -> LT
+        LT -> GT
+
+    where
+        latest' :: [Comment] -> UTCTime
+        latest' = maximum . map timeStamp
 
 showThreadedComments :: (YesodAuth m, YesodComments m) => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
 showThreadedComments (tid, comments) = [whamlet|
