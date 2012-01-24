@@ -21,9 +21,9 @@ module Yesod.Comments.Core
     , commentFromForm
     , commentForm
     , commentFormAuth
-    --, commentFormEdit
+    , commentFormEdit
     , handleForm
-    --, handleFormEdit
+    , handleFormEdit
     , showComments
     , showComment
     , showCommentAuth
@@ -33,55 +33,44 @@ module Yesod.Comments.Core
 
 import Yesod
 import Yesod.Auth
-import Control.Applicative ((<$>), (<*>))
-import Data.Time           (UTCTime, getCurrentTime)
-import Network.Wai         (remoteHost)
-
-import qualified Data.Text as T
-
--- Goodies
 import Yesod.Markdown
+import Control.Applicative ((<$>), (<*>), pure)
+import Data.Text           (Text)
+import Data.Time           (UTCTime, getCurrentTime)
 import Data.Time.Format.Human
 import Network.Gravatar
+import Network.Wai         (remoteHost)
+import qualified Data.Text as T
 
-type ThreadId  = T.Text
+type ThreadId  = Text
 type CommentId = Int
 
 class Yesod m => YesodComments m where
-    -- | Find a specific comment
-    getComment :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
-
-    -- | Store a new comment
-    storeComment :: Comment -> GHandler s m ()
-
-    -- | Update a comment
+    getComment    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+    storeComment  :: Comment -> GHandler s m ()
     updateComment :: Comment -> Comment -> GHandler s m ()
-
-    -- | Remove a comment
     deleteComment :: Comment -> GHandler s m ()
-
-    -- | Load all comments, possibly filtered to a single thread.
-    loadComments :: Maybe ThreadId -> GHandler s m [Comment]
+    loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
 
     -- | If using Auth, provide the function to get from a user id to 
     --   the string to use as the commenter's username. This should 
     --   return something friendly probably pulled from the user's
     --   profile on your site.
-    displayUser :: AuthId m -> GHandler s m T.Text
-    displayUser _ = return "" -- fixme: use toSinglePiece in new auth pkg
+    displayUser :: AuthId m -> GHandler s m Text
+    displayUser _ = return ""
 
     -- | If using Auth, provide the function to get from a user id to 
     --   the string to use as the commenter's email.
-    displayEmail :: AuthId m -> GHandler s m T.Text
+    displayEmail :: AuthId m -> GHandler s m Text
     displayEmail _ = return ""
 
 data Comment = Comment
     { threadId  :: ThreadId
     , commentId :: CommentId
     , timeStamp :: UTCTime
-    , ipAddress :: T.Text
-    , userName  :: T.Text
-    , userEmail :: T.Text
+    , ipAddress :: Text
+    , userName  :: Text
+    , userEmail :: Text
     , content   :: Markdown
     , isAuth    :: Bool
     }
@@ -90,18 +79,20 @@ instance Eq Comment where
     a == b = (threadId a == threadId b) && (commentId a == commentId b)
 
 data CommentForm = CommentForm
-    { formUser    :: T.Text
-    , formEmail   :: T.Text
+    { formUser    :: Text
+    , formEmail   :: Text
     , formComment :: Markdown
     , formIsAuth  :: Bool
     }
 
--- | Cleanse form input and create a 'Comment' to be stored
+type Form s m x = Html -> MForm s m (FormResult x, GWidget s m ())
+
 commentFromForm :: YesodComments m => ThreadId -> CommentForm -> GHandler s m Comment
 commentFromForm tid cf = do
     now <- liftIO getCurrentTime
-    ip  <- return . show . remoteHost =<< waiRequest
+    ip  <- fmap (show . remoteHost) waiRequest
     cid <- getNextCommentId tid
+
     return Comment 
         { threadId  = tid 
         , commentId = cid 
@@ -113,112 +104,48 @@ commentFromForm tid cf = do
         , isAuth    = formIsAuth  cf
         }
 
--- | The comment form itself
-commentForm :: RenderMessage m FormMessage => Html -> MForm s m (FormResult CommentForm, GWidget s m ())
+commentForm :: RenderMessage m FormMessage => Form s m CommentForm
 commentForm = renderBootstrap $ CommentForm
-    <$> areq textField     "Name"    Nothing
-    <*> areq emailField    "Email"   Nothing
-    <*> areq markdownField "Comment"
-        { fsTooltip = Just "Comments are parsed as pandoc-style markdown"
-        } Nothing
-    <*> (formToAForm $ return (FormSuccess False, []))
+    <$> areq textField  "Name"  Nothing
+    <*> areq emailField "Email" Nothing
+    <*> areq markdownField commentLabel Nothing
+    <*> pure False
 
--- | The comment form if using authentication (uid is hidden and display
---   name is shown)
 commentFormAuth :: RenderMessage m FormMessage
-                => T.Text -- ^ text version of uid
-                -> T.Text -- ^ friendly name
-                -> T.Text -- ^ email
-                -> Html   -- ^ nonce fragment
-                -> MForm s m (FormResult CommentForm, GWidget s m ())
---commentFormAuth user username email fragment = do
+                => Text -- ^ Text version of uid
+                -> Text -- ^ friendly user name
+                -> Text -- ^ user's email
+                -> Form s m CommentForm
 commentFormAuth user username email = renderBootstrap $ CommentForm
-    <$> (formToAForm $ return (FormSuccess user, []))
-    <*> (formToAForm $ return (FormSuccess email, []))
-    <*> areq markdownField "Comment"
-        { fsTooltip = Just "Comments are parsed as pandoc-style markdown"
-        } Nothing
-    <*> (formToAForm $ return (FormSuccess True, []))
+    <$> pure user <*> pure email
+    <*> areq markdownField commentLabel Nothing
+    <*> pure True
 
--- | POST the form and insert the new comment
-handleForm :: YesodComments m
-           => FormResult CommentForm
-           -> ThreadId
-           -> GWidget s m ()
-handleForm res tid = case res of
-    FormMissing    -> return ()
-    FormFailure _  -> return ()
-    FormSuccess cf -> lift $ do
-        storeComment =<< commentFromForm tid cf
-        setMessage "comment added."
-        redirectCurrentRoute
+commentFormEdit :: RenderMessage m FormMessage => Comment -> Form s m CommentForm
+commentFormEdit comment = renderBootstrap $ CommentForm
+    <$> pure "" <*> pure ""
+    <*> areq markdownField commentLabel (Just $ content comment)
+    <*> pure True
 
-{- FIXME
--- | The comment form used in the management edit page.
-commentFormEdit :: RenderMessage m FormMessage
-                => Comment
-                -> Html
-                -> MForm s m (FormResult CommentForm, GWidget s m ())
-commentFormEdit comment fragment = do
-    (fComment, fiComment) <- mreq markdownField "comment:" (Just $ content comment)
-    return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> fComment <*> FormSuccess True, [whamlet|
-        #{fragment}
-        <table>
-            ^{fieldRow fiComment}
-            <tr>
-                <td>&nbsp;
-                <td colspan="2">
-                    <input type="submit" value="Update comment">
-        |])
+handleForm :: YesodComments m => FormResult CommentForm -> ThreadId -> GWidget s m ()
+handleForm (FormSuccess cf) tid = lift $ do
+    storeComment =<< commentFromForm tid cf
+    setMessage "comment added."
+    redirectCurrentRoute
 
-fieldRow :: FieldView s m -> GWidget s m ()
-fieldRow fv = [whamlet|
-    <tr .#{clazz fv}>
-        <th>
-            <label for="#{fvId fv}">#{fvLabel fv}
-            $maybe tt <- fvTooltip fv
-                <div .tooltip>#{tt}
-        <td>
-            ^{fvInput fv}
-        <td>
-            $maybe error <- fvErrors fv
-                #{error}
-            $nothing
-                &nbsp;
-    |]
+handleForm _ _ = return ()
 
-clazz :: FieldView s m -> String
-clazz fv = if fvRequired fv then "required" else "optional"
--- | POST the form and update an existing comment
-handleFormEdit :: YesodComments m
-               => Route m
-               -> FormResult CommentForm
-               -> Comment
-               -> GWidget s m ()
+handleFormEdit :: YesodComments m => Route m -> FormResult CommentForm -> Comment -> GWidget s m ()
+handleFormEdit r (FormSuccess cf) comment = lift $ do
+    updateComment comment $ comment { content = formComment cf }
+    setMessage "comment updated."
+    redirect r
 
-handleFormEdit r res comment = case res of
-    FormMissing    -> return ()
-    FormFailure _  -> return ()
-    FormSuccess cf -> lift $ do
-        updateComment comment $ comment { content = formComment cf }
-        setMessage "comment updateded."
-        redirect r
--}
+handleFormEdit _ _ _ = return ()
 
--- | Redirect back to the current route after a POST request
-redirectCurrentRoute :: Yesod m => GHandler s m ()
-redirectCurrentRoute = do
-    tm <- getRouteToMaster
-    mr <- getCurrentRoute
-    case mr of
-        Just r  -> redirect $ tm r
-        Nothing -> notFound
-
--- | Show a single comment
 showComment :: Comment -> GWidget s m ()
 showComment comment = showHelper comment (userName comment, userEmail comment)
 
--- | Show a single comment, auth version
 showCommentAuth :: (YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
 showCommentAuth comment = do
     let cusername = userName comment
@@ -246,12 +173,13 @@ showComments comments f = [whamlet|
     |]
 
     where
+        -- pluralize comments
         helper :: Int -> String
         helper 0 = "no comments"
         helper 1 = "1 comment"
         helper n = show n ++ " comments"
 
-showHelper :: Comment -> (T.Text,T.Text) -> GWidget s m ()
+showHelper :: Comment -> (Text,Text) -> GWidget s m ()
 showHelper comment (username, email) = do
     commentTimestamp <- lift . liftIO . humanReadableTime $ timeStamp comment
 
@@ -278,7 +206,7 @@ showHelper comment (username, email) = do
 
 -- | As the final step before insert, this is called to get the next
 --   comment id for the thread. super-high concurrency is probably not
---   well-supported here...
+--   well-supported here.
 getNextCommentId :: YesodComments m => ThreadId -> GHandler s m CommentId
 getNextCommentId tid = go =<< loadComments (Just tid)
 
@@ -287,9 +215,23 @@ getNextCommentId tid = go =<< loadComments (Just tid)
         go [] = return 1
         go cs = return $ maximum (map commentId cs) + 1
 
+-- | Returns False when not logged in.
 isCommentingUser :: YesodAuth m => Comment -> GHandler s m Bool
 isCommentingUser comment = do
     muid <- maybeAuthId
     return $ case muid of
         Just uid -> isAuth comment && toPathPiece uid == userName comment
         _        -> False
+
+-- | Redirect back to the current route after a POST request. Calls not
+--   found if the current route is unknown.
+redirectCurrentRoute :: Yesod m => GHandler s m ()
+redirectCurrentRoute = do
+    tm <- getRouteToMaster
+    mr <- getCurrentRoute
+    case mr of
+        Just r  -> redirect $ tm r
+        Nothing -> notFound
+
+commentLabel :: FieldSettings Text
+commentLabel = "Comment" { fsTooltip = Just "Comments are parsed as pandoc-style markdown." }
