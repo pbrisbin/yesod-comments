@@ -94,13 +94,12 @@ addCommentsAuth tid = do
         img :: Email -> String
         img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 48 }
 
--- | Show the authroute as a link if set up
-login :: Yesod m => GWidget s m ()
-login = do
-    mroute <- lift $ do
-        setUltDest'
-        fmap authRoute getYesod
+        login :: Yesod m => GWidget s m ()
+        login = do
+            mroute <- lift $ do
+                setUltDest'
+                fmap authRoute getYesod
 
-    case mroute of
-        Just r  -> [whamlet|<a href="@{r}">log in|]
-        Nothing -> [whamlet|log in|]
+            case mroute of
+                Just r  -> [whamlet|<a href="@{r}">log in|]
+                Nothing -> [whamlet|log in|]
