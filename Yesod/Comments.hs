@@ -61,7 +61,7 @@ addCommentsAuth tid = do
                 return (True, toPathPiece uid, uname, email)
 
     comments               <- lift $ loadComments (Just tid)
-    ((res, form), enctype) <- lift $ runFormPost (commentFormAuth uid username email)
+    ((res, form), enctype) <- lift $ runFormPost (commentFormAuth uid email)
 
     handleForm res tid
 
@@ -92,7 +92,7 @@ addCommentsAuth tid = do
 
     where
         img :: Email -> String
-        img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 48 }
+        img e = gravatarImg e defaultOptions { gDefault = Just MM, gSize = Just $ Size 48 }
 
         login :: Yesod m => GWidget s m ()
         login = do

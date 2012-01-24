@@ -18,12 +18,12 @@ module Yesod.Comments.Core
     , CommentId
     , ThreadId
     , YesodComments (..)
+    , Form
     , commentFromForm
     , commentForm
     , commentFormAuth
-    , commentFormEdit
+    , commentLabel
     , handleForm
-    , handleFormEdit
     , showComments
     , showComment
     , showCommentAuth
@@ -113,19 +113,13 @@ commentForm = renderBootstrap $ CommentForm
 
 commentFormAuth :: RenderMessage m FormMessage
                 => Text -- ^ Text version of uid
-                -> Text -- ^ friendly user name
                 -> Text -- ^ user's email
                 -> Form s m CommentForm
-commentFormAuth user username email = renderBootstrap $ CommentForm
+commentFormAuth user email = renderBootstrap $ CommentForm
     <$> pure user <*> pure email
     <*> areq markdownField commentLabel Nothing
     <*> pure True
 
-commentFormEdit :: RenderMessage m FormMessage => Comment -> Form s m CommentForm
-commentFormEdit comment = renderBootstrap $ CommentForm
-    <$> pure "" <*> pure ""
-    <*> areq markdownField commentLabel (Just $ content comment)
-    <*> pure True
 
 handleForm :: YesodComments m => FormResult CommentForm -> ThreadId -> GWidget s m ()
 handleForm (FormSuccess cf) tid = lift $ do
@@ -135,13 +129,6 @@ handleForm (FormSuccess cf) tid = lift $ do
 
 handleForm _ _ = return ()
 
-handleFormEdit :: YesodComments m => Route m -> FormResult CommentForm -> Comment -> GWidget s m ()
-handleFormEdit r (FormSuccess cf) comment = lift $ do
-    updateComment comment $ comment { content = formComment cf }
-    setMessage "comment updated."
-    redirect r
-
-handleFormEdit _ _ _ = return ()
 
 showComment :: Comment -> GWidget s m ()
 showComment comment = showHelper comment (userName comment, userEmail comment)
@@ -202,7 +189,7 @@ showHelper comment (username, email) = do
 
     where
         img :: Email -> String
-        img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
+        img e = gravatarImg e defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
 
 -- | As the final step before insert, this is called to get the next
 --   comment id for the thread. super-high concurrency is probably not

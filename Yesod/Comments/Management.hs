@@ -41,12 +41,12 @@ import Yesod
 import Yesod.Auth
 import Yesod.Comments.Core
 import Yesod.Markdown
-import Data.List (sortBy)
+import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad (forM, unless)
-import Data.List (nub, sort)
+import Data.List (sortBy, nub)
 import Data.Time (UTCTime, formatTime)
-import System.Locale (defaultTimeLocale, rfc822DateFormat)
 import Language.Haskell.TH.Syntax hiding (lift)
+import System.Locale (defaultTimeLocale, rfc822DateFormat)
 
 data CommentsAdmin = CommentsAdmin
 
@@ -69,10 +69,10 @@ getOverviewR = do
     threads <- getThreadedComments
     defaultLayout $ do
         setTitle "Comments administration"
-        addStyling
+
         [whamlet|
             <h1>Comments overview
-            <article .yesod_comments_overview>
+            <div .yesod_comments .overview>
                 $if null threads
                     <p>No comments found.
                 $else
@@ -84,10 +84,10 @@ getViewR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler 
 getViewR tid cid = withUserComment tid cid $ \comment ->
     defaultLayout $ do
         setTitle "View comment"
-        addStyling
+
         [whamlet|
             <h1>View comment
-            <article .yesod_comments_view_comment>
+            <div .yesod_comments .view>
                 <table>
                     <tr>
                         <th>Thread:
@@ -122,14 +122,16 @@ getEditR tid cid = withUserComment tid cid $ \comment -> do
     defaultLayout $ do
         setTitle "Edit comment"
         handleFormEdit (tm OverviewR) res comment
-        addStyling
         [whamlet|
             <h1>Edit comment
-            <article .yesod_comments_edit_comment>
+            <div .yesod_comments .edit>
                 <h3>Update comment
-                <div .yesod_comment_input>
-                    <form enctype="#{enctype}" method="post">^{form}
-                    <p .helptext>Comments are parsed as pandoc-style markdown
+                <div .input>
+                    <form enctype="#{enctype}" method="post" .form-stacked>
+                        ^{form}
+
+                        <div .actions>
+                            <button .btn .primary type="submit">Add comment
         |]
 
 postEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
@@ -169,7 +171,7 @@ latest (t1, cs1) (t2,cs2) =
 
 showThreadedComments :: (YesodAuth m, YesodComments m) => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
 showThreadedComments (tid, comments) = [whamlet|
-    <div .yesod_comments_overview_thread>
+    <div .yesod_comments .thread>
         <h3>#{tid}
         $forall comment <- comments
             ^{showThreadComment comment}
@@ -181,11 +183,11 @@ showThreadedComments (tid, comments) = [whamlet|
             mine <- lift $ isCommentingUser comment
             [whamlet|
                 $if mine
-                    <div .yesod_comments_overview_comment_yours>
+                    <div .yours>
                         ^{showCommentAuth comment}
                         ^{updateLinks comment}
                 $else
-                    <div .yesod_comments_overview_comment>
+                    <div>
                         ^{showCommentAuth comment}
                 |]
 
@@ -193,7 +195,7 @@ updateLinks :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmi
 updateLinks (Comment tid cid _ _ _ _ _ _ )= do
     tm <- lift $ getRouteToMaster
     [whamlet|
-        <div .yesod_comments_update_links>
+        <div .update_links>
             <p>
                 <a href=@{tm $ ViewR tid cid}>View
                 \ | 
@@ -203,7 +205,7 @@ updateLinks (Comment tid cid _ _ _ _ _ _ )= do
         |]
 
 -- | Find a comment by thread/id, ensure it's the logged in user's
---   comment and execute and action on it. Gives notFound or
+--   comment and execute an action on it. Gives notFound or
 --   permissionDenied in failing cases.
 withUserComment :: (YesodAuth m, YesodComments m)
                 => ThreadId
@@ -214,9 +216,23 @@ withUserComment tid cid f = do
     mcomment <- getComment tid cid
     case mcomment of
         Just comment -> do
-            _     <- requireAuthId
+            _    <- requireAuthId
             mine <- isCommentingUser comment
             unless mine $ permissionDenied "you can only manage your own comments"
             f comment
 
         Nothing -> notFound
+
+commentFormEdit :: RenderMessage m FormMessage => Comment -> Form s m CommentForm
+commentFormEdit comment = renderBootstrap $ CommentForm
+    <$> pure "" <*> pure ""
+    <*> areq markdownField commentLabel (Just $ content comment)
+    <*> pure True
+
+handleFormEdit :: YesodComments m => Route m -> FormResult CommentForm -> Comment -> GWidget s m ()
+handleFormEdit r (FormSuccess cf) comment = lift $ do
+    updateComment comment $ comment { content = formComment cf }
+    setMessage "comment updated."
+    redirect r
+
+handleFormEdit _ _ _ = return ()
