@@ -23,6 +23,7 @@ module Yesod.Comments
 import Yesod
 import Yesod.Auth
 import Yesod.Comments.Core
+import Network.Gravatar
 
 -- | Comments that anyone can enter anonymously
 addComments :: (RenderMessage m FormMessage, YesodComments m)
@@ -33,20 +34,21 @@ addComments tid = do
     ((res, form), enctype) <- lift $ runFormPost commentForm
 
     handleForm res tid
-    addStyling
+
     [whamlet|
         <div .yesod_comments>
-            <h4>Add a comment:
-            <div .yesod_comment_input>
-                <form enctype="#{enctype}" method="post">^{form}
-                <p .helptext>Comments are parsed as pandoc-style markdown
+            <div .list>
+                $if not $ null comments
+                    <h4>Showing #{toHtml $ helper $ length comments}:
 
-            $if not $ null comments
-                <h4>Showing #{toHtml $ helper $ length comments}:
+                    $forall comment <- comments
+                        ^{showComment comment}
 
-                $forall comment <- comments
-                    <div .yesod_comment>^{showComment comment}
-
+            <div .input>
+                <form enctype="#{enctype}" method="post" .form-stacked>
+                    ^{form}
+                    <div .actions>
+                        <button .btn .primary type="submit">Add comment
     |]
 
 -- | Comments that require authentication
@@ -67,23 +69,40 @@ addCommentsAuth tid = do
     ((res, form), enctype) <- lift $ runFormPost (commentFormAuth uid username email)
 
     handleForm res tid
-    addStyling
+
     [whamlet|
         <div .yesod_comments>
+            <div .list>
+                $if not $ null comments
+                    <h4>Showing #{toHtml $ helper $ length comments}:
+
+                    $forall comment <- comments
+                        ^{showCommentAuth comment}
+
             $if isAuthenticated
-                <h4>Add a comment:
-                <div .yesod_comment_input>
-                    <form enctype="#{enctype}" method="post">^{form}
-                    <p .helptext>Comments are parsed as pandoc-style markdown
+                <div .avatar>
+                    <a target="_blank" title="change your profile picture at gravatar" href="http://gravatar.com/emails/">
+                        <img src="#{img email}">
+
+                <div .input>
+                    <form enctype="#{enctype}" method="post" .form-stacked>
+                        <div .clearfix .optional>
+                            <label for="username">Username
+                            <div .input>
+                                <p #username>#{username}
+
+                        ^{form}
+
+                        <div .actions>
+                            <button .btn .primary type="submit">Add comment
+
             $else
                 <h4>Please ^{login} to post a comment.
-
-            $if not $ null comments
-                <h4>Showing #{toHtml $ helper $ length comments}:
-
-                $forall comment <- comments
-                    <div .yesod_comment>^{showCommentAuth comment}
     |]
+
+    where
+
+        img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 48 }
 
 helper :: Int -> String
 helper 0 = "no comments"

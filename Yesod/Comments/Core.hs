@@ -21,10 +21,9 @@ module Yesod.Comments.Core
     , commentFromForm
     , commentForm
     , commentFormAuth
-    , commentFormEdit
+    --, commentFormEdit
     , handleForm
-    , handleFormEdit
-    , addStyling
+    --, handleFormEdit
     , showComment
     , showCommentAuth
     , getNextCommentId
@@ -115,21 +114,14 @@ commentFromForm tid cf = do
 
 -- | The comment form itself
 commentForm :: RenderMessage m FormMessage => Html -> MForm s m (FormResult CommentForm, GWidget s m ())
-commentForm fragment = do
-    (user   , fiUser   ) <- mreq textField     "name:"    Nothing
-    (email  , fiEmail  ) <- mreq emailField    "email:"   Nothing
-    (comment, fiComment) <- mreq markdownField "comment:" Nothing
-    return (CommentForm <$> user <*> email <*> comment <*> FormSuccess False, [whamlet|
-        #{fragment}
-        <table>
-            ^{fieldRow fiUser}
-            ^{fieldRow fiEmail}
-            ^{fieldRow fiComment}
-            <tr>
-                <td>&nbsp;
-                <td colspan="2">
-                    <input type="submit" value="Add comment">
-        |])
+commentForm = renderBootstrap $ CommentForm
+    <$> areq textField     "Name"    Nothing
+    <*> areq emailField    "Email"   Nothing
+    <*> areq markdownField "Comment" Nothing
+    <*> (formToAForm $ return (FormSuccess False, []))
+
+-- TODO
+-- <p .helptext>Comments are parsed as pandoc-style markdown
 
 -- | The comment form if using authentication (uid is hidden and display
 --   name is shown)
@@ -139,29 +131,15 @@ commentFormAuth :: RenderMessage m FormMessage
                 -> T.Text -- ^ email
                 -> Html   -- ^ nonce fragment
                 -> MForm s m (FormResult CommentForm, GWidget s m ())
-commentFormAuth user username email fragment = do
-    let img = gravatarImg email defaultOptions { gDefault = Just MM }
-
-    (fComment, fiComment) <- mreq markdownField "comment:" Nothing
-    return (CommentForm <$> FormSuccess user <*> FormSuccess email <*> fComment <*> FormSuccess True, [whamlet|
-        #{fragment}
-        <div .yesod_comment_avatar_input>
-            <a title="change your profile picture at gravatar" href="http://gravatar.com/emails/">
-                <img src="#{img}">
-
-        <table>
-            <tr>
-                <th>name:
-                <td colspan="2">#{username}
-
-            ^{fieldRow fiComment}
-            <tr>
-                <td>&nbsp;
-                <td colspan="2">
-                    <input type="submit" value="Add comment">
-        |])
+--commentFormAuth user username email fragment = do
+commentFormAuth user username email = renderBootstrap $ CommentForm
+    <$> (formToAForm $ return (FormSuccess user, []))
+    <*> (formToAForm $ return (FormSuccess email, []))
+    <*> areq markdownField "Comment" Nothing
+    <*> (formToAForm $ return (FormSuccess True, []))
 
 -- | The comment form used in the management edit page.
+{- FIXME
 commentFormEdit :: RenderMessage m FormMessage
                 => Comment
                 -> Html
@@ -196,23 +174,7 @@ fieldRow fv = [whamlet|
 
 clazz :: FieldView s m -> String
 clazz fv = if fvRequired fv then "required" else "optional"
-
--- | Add some cassius that is common to all the yesod-comments pages
-addStyling :: Yesod m => GWidget s m ()
-addStyling = addCassius [cassius|
-    .yesod_comment_input th
-        text-align: left
-        vertical-align: top
-    .yesod_comment_input textarea
-        height: 10ex
-        width: 50ex
-    .yesod_comment_avatar_input, .yesod_comment_avatar_list
-        float: left
-    .yesod_comment_avatar_input
-        margin-right: 5px
-    .yesod_comment_avatar_list
-        margin-right: 3px
-    |]
+-}
 
 -- | POST the form and insert the new comment
 handleForm :: YesodComments m
@@ -227,6 +189,7 @@ handleForm res tid = case res of
         setMessage "comment added."
         redirectCurrentRoute
 
+{- FIXME
 -- | POST the form and update an existing comment
 handleFormEdit :: YesodComments m
                => Route m
@@ -240,6 +203,7 @@ handleFormEdit r res comment = case res of
         updateComment comment $ comment { content = formComment cf }
         setMessage "comment updateded."
         redirect r
+-}
 
 -- | Redirect back to the current route after a POST request
 redirectCurrentRoute :: Yesod m => GHandler s m ()
@@ -271,23 +235,31 @@ showCommentAuth comment = do
 
     showHelper comment (cuname, cemail)
 
--- | Factor out common code
+-- | Factor out common code to display one stored comment
 showHelper :: Yesod m => Comment -> (T.Text,T.Text) -> GWidget s m ()
 showHelper comment (username, email) = do
     commentTimestamp <- lift . liftIO . humanReadableTime $ timeStamp comment
+
     let anchor = "comment_" ++ show (commentId comment)
-    let img    = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
-    addHamlet [hamlet|
-        <div .yesod_comment_avatar_list>
-            <img src="#{img}">
 
-        <p>
-            <a href="##{anchor}" id="#{anchor}">#{commentTimestamp}
-            , #{username} wrote:
+    [whamlet|
+        <div .comment>
+            <div .attribution>
+                <p>
+                    <span .avatar>
+                        <img src="#{img email}"> 
 
-        <blockquote>
-            #{markdownToHtml $ content comment}
+                    <a href="##{anchor}" id="#{anchor}">#{commentTimestamp}
+                    , #{username} wrote:
+
+            <div .content>
+                <blockquote>
+                    #{markdownToHtml $ content comment}
         |]
+
+    where
+
+        img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
 
 -- | As the final step before insert, this is called to get the next
 --   comment id for the thread. super-high concurrency is probably not
