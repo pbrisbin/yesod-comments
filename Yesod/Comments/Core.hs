@@ -24,6 +24,7 @@ module Yesod.Comments.Core
     --, commentFormEdit
     , handleForm
     --, handleFormEdit
+    , showComments
     , showComment
     , showCommentAuth
     , getNextCommentId
@@ -117,11 +118,10 @@ commentForm :: RenderMessage m FormMessage => Html -> MForm s m (FormResult Comm
 commentForm = renderBootstrap $ CommentForm
     <$> areq textField     "Name"    Nothing
     <*> areq emailField    "Email"   Nothing
-    <*> areq markdownField "Comment" Nothing
+    <*> areq markdownField "Comment"
+        { fsTooltip = Just "Comments are parsed as pandoc-style markdown"
+        } Nothing
     <*> (formToAForm $ return (FormSuccess False, []))
-
--- TODO
--- <p .helptext>Comments are parsed as pandoc-style markdown
 
 -- | The comment form if using authentication (uid is hidden and display
 --   name is shown)
@@ -135,11 +135,26 @@ commentFormAuth :: RenderMessage m FormMessage
 commentFormAuth user username email = renderBootstrap $ CommentForm
     <$> (formToAForm $ return (FormSuccess user, []))
     <*> (formToAForm $ return (FormSuccess email, []))
-    <*> areq markdownField "Comment" Nothing
+    <*> areq markdownField "Comment"
+        { fsTooltip = Just "Comments are parsed as pandoc-style markdown"
+        } Nothing
     <*> (formToAForm $ return (FormSuccess True, []))
 
--- | The comment form used in the management edit page.
+-- | POST the form and insert the new comment
+handleForm :: YesodComments m
+           => FormResult CommentForm
+           -> ThreadId
+           -> GWidget s m ()
+handleForm res tid = case res of
+    FormMissing    -> return ()
+    FormFailure _  -> return ()
+    FormSuccess cf -> lift $ do
+        storeComment =<< commentFromForm tid cf
+        setMessage "comment added."
+        redirectCurrentRoute
+
 {- FIXME
+-- | The comment form used in the management edit page.
 commentFormEdit :: RenderMessage m FormMessage
                 => Comment
                 -> Html
@@ -174,28 +189,13 @@ fieldRow fv = [whamlet|
 
 clazz :: FieldView s m -> String
 clazz fv = if fvRequired fv then "required" else "optional"
--}
-
--- | POST the form and insert the new comment
-handleForm :: YesodComments m
-           => FormResult CommentForm
-           -> ThreadId
-           -> GWidget s m ()
-handleForm res tid = case res of
-    FormMissing    -> return ()
-    FormFailure _  -> return ()
-    FormSuccess cf -> lift $ do
-        storeComment =<< commentFromForm tid cf
-        setMessage "comment added."
-        redirectCurrentRoute
-
-{- FIXME
 -- | POST the form and update an existing comment
 handleFormEdit :: YesodComments m
                => Route m
                -> FormResult CommentForm
                -> Comment
                -> GWidget s m ()
+
 handleFormEdit r res comment = case res of
     FormMissing    -> return ()
     FormFailure _  -> return ()
@@ -215,11 +215,11 @@ redirectCurrentRoute = do
         Nothing -> notFound
 
 -- | Show a single comment
-showComment :: Yesod m => Comment -> GWidget s m ()
+showComment :: Comment -> GWidget s m ()
 showComment comment = showHelper comment (userName comment, userEmail comment)
 
 -- | Show a single comment, auth version
-showCommentAuth :: (Yesod m, YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
+showCommentAuth :: (YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
 showCommentAuth comment = do
     let cusername = userName comment
 
@@ -235,8 +235,23 @@ showCommentAuth comment = do
 
     showHelper comment (cuname, cemail)
 
--- | Factor out common code to display one stored comment
-showHelper :: Yesod m => Comment -> (T.Text,T.Text) -> GWidget s m ()
+showComments :: [Comment] -> (Comment -> GWidget s m ()) -> GWidget s m ()
+showComments comments f = [whamlet|
+    <div .list>
+        $if not $ null comments
+            <h4>Showing #{toHtml $ helper $ length comments}:
+
+            $forall comment <- comments
+                ^{f comment}
+    |]
+
+    where
+        helper :: Int -> String
+        helper 0 = "no comments"
+        helper 1 = "1 comment"
+        helper n = show n ++ " comments"
+
+showHelper :: Comment -> (T.Text,T.Text) -> GWidget s m ()
 showHelper comment (username, email) = do
     commentTimestamp <- lift . liftIO . humanReadableTime $ timeStamp comment
 
@@ -258,7 +273,7 @@ showHelper comment (username, email) = do
         |]
 
     where
-
+        img :: Email -> String
         img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
 
 -- | As the final step before insert, this is called to get the next
@@ -272,13 +287,9 @@ getNextCommentId tid = go =<< loadComments (Just tid)
         go [] = return 1
         go cs = return $ maximum (map commentId cs) + 1
 
--- | Note: this function does not requireAuthId so a non-logged in user
---   just returns false.
-isCommentingUser :: (YesodAuth m, YesodComments m)
-                 => Comment
-                 -> GHandler s m Bool
+isCommentingUser :: YesodAuth m => Comment -> GHandler s m Bool
 isCommentingUser comment = do
     muid <- maybeAuthId
-    case muid of
-        Just uid -> return $ isAuth comment && toPathPiece uid == userName comment
-        _        -> return False
+    return $ case muid of
+        Just uid -> isAuth comment && toPathPiece uid == userName comment
+        _        -> False

@@ -37,12 +37,7 @@ addComments tid = do
 
     [whamlet|
         <div .yesod_comments>
-            <div .list>
-                $if not $ null comments
-                    <h4>Showing #{toHtml $ helper $ length comments}:
-
-                    $forall comment <- comments
-                        ^{showComment comment}
+            ^{showComments comments showComment}
 
             <div .input>
                 <form enctype="#{enctype}" method="post" .form-stacked>
@@ -72,12 +67,7 @@ addCommentsAuth tid = do
 
     [whamlet|
         <div .yesod_comments>
-            <div .list>
-                $if not $ null comments
-                    <h4>Showing #{toHtml $ helper $ length comments}:
-
-                    $forall comment <- comments
-                        ^{showCommentAuth comment}
+            ^{showComments comments showCommentAuth}
 
             $if isAuthenticated
                 <div .avatar>
@@ -101,19 +91,16 @@ addCommentsAuth tid = do
     |]
 
     where
-
+        img :: Email -> String
         img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 48 }
-
-helper :: Int -> String
-helper 0 = "no comments"
-helper 1 = "1 comment"
-helper n = show n ++ " comments"
 
 -- | Show the authroute as a link if set up
 login :: Yesod m => GWidget s m ()
 login = do
-    lift $ setUltDest' -- so we come back here after login
-    mroute <- lift $ fmap authRoute getYesod
+    mroute <- lift $ do
+        setUltDest'
+        fmap authRoute getYesod
+
     case mroute of
         Just r  -> [whamlet|<a href="@{r}">log in|]
         Nothing -> [whamlet|log in|]
