@@ -61,7 +61,7 @@ addCommentsAuth tid = do
             Just uid -> do
                 uname <- displayUser uid
                 email <- displayEmail uid
-                return (True, toSinglePiece uid, uname, email)
+                return (True, toPathPiece uid, uname, email)
 
     comments               <- lift $ loadComments (Just tid)
     ((res, form), enctype) <- lift $ runFormPost (commentFormAuth uid username email)

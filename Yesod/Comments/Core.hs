@@ -33,12 +33,16 @@ module Yesod.Comments.Core
 
 import Yesod
 import Yesod.Auth
-import Yesod.Goodies
 import Control.Applicative ((<$>), (<*>))
 import Data.Time           (UTCTime, getCurrentTime)
 import Network.Wai         (remoteHost)
 
 import qualified Data.Text as T
+
+-- Goodies
+import Yesod.Markdown
+import Data.Time.Format.Human
+import Network.Gravatar
 
 type ThreadId  = T.Text
 type CommentId = Int
@@ -110,7 +114,7 @@ commentFromForm tid cf = do
         }
 
 -- | The comment form itself
-commentForm :: RenderMessage m FormMessage => Html -> Form s m (FormResult CommentForm, GWidget s m ())
+commentForm :: RenderMessage m FormMessage => Html -> MForm s m (FormResult CommentForm, GWidget s m ())
 commentForm fragment = do
     (user   , fiUser   ) <- mreq textField     "name:"    Nothing
     (email  , fiEmail  ) <- mreq emailField    "email:"   Nothing
@@ -134,7 +138,7 @@ commentFormAuth :: RenderMessage m FormMessage
                 -> T.Text -- ^ friendly name
                 -> T.Text -- ^ email
                 -> Html   -- ^ nonce fragment
-                -> Form s m (FormResult CommentForm, GWidget s m ())
+                -> MForm s m (FormResult CommentForm, GWidget s m ())
 commentFormAuth user username email fragment = do
     let img = gravatarImg email defaultOptions { gDefault = Just MM }
 
@@ -161,7 +165,7 @@ commentFormAuth user username email fragment = do
 commentFormEdit :: RenderMessage m FormMessage
                 => Comment
                 -> Html
-                -> Form s m (FormResult CommentForm, GWidget s m ())
+                -> MForm s m (FormResult CommentForm, GWidget s m ())
 commentFormEdit comment fragment = do
     (fComment, fiComment) <- mreq markdownField "comment:" (Just $ content comment)
     return (CommentForm <$> FormSuccess "" <*> FormSuccess "" <*> fComment <*> FormSuccess True, [whamlet|
@@ -235,7 +239,7 @@ handleFormEdit r res comment = case res of
     FormSuccess cf -> lift $ do
         updateComment comment $ comment { content = formComment cf }
         setMessage "comment updateded."
-        redirect RedirectTemporary r
+        redirect r
 
 -- | Redirect back to the current route after a POST request
 redirectCurrentRoute :: Yesod m => GHandler s m ()
@@ -243,7 +247,7 @@ redirectCurrentRoute = do
     tm <- getRouteToMaster
     mr <- getCurrentRoute
     case mr of
-        Just r  -> redirect RedirectTemporary $ tm r
+        Just r  -> redirect $ tm r
         Nothing -> notFound
 
 -- | Show a single comment
@@ -257,7 +261,7 @@ showCommentAuth comment = do
 
     (cuname, cemail) <-
         if isAuth comment
-            then case fromSinglePiece $ cusername of
+            then case fromPathPiece $ cusername of
                 Just uid -> do
                     uname <- lift $ displayUser  uid
                     email <- lift $ displayEmail uid
@@ -304,5 +308,5 @@ isCommentingUser :: (YesodAuth m, YesodComments m)
 isCommentingUser comment = do
     muid <- maybeAuthId
     case muid of
-        Just uid -> return $ isAuth comment && toSinglePiece uid == userName comment
+        Just uid -> return $ isAuth comment && toPathPiece uid == userName comment
         _        -> return False

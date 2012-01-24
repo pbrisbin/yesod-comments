@@ -16,18 +16,21 @@ library
   exposed-modules: Yesod.Comments
                  , Yesod.Comments.Core
                  , Yesod.Comments.Storage
-                 , Yesod.Comments.Management
+                 --, Yesod.Comments.Management
   
   -- Packages needed in order to build this package.
-  build-depends: base          >= 4     && < 5
-               , text          >= 0.11  && < 0.12
-               , bytestring    >= 0.9.1 && < 0.10
-               , wai           >= 0.4   && < 0.5
-               , yesod         >= 0.9   && < 1.0
-               , yesod-form    >= 0.3   && < 0.4
-               , yesod-auth    >= 0.7   && < 0.8
-               , yesod-goodies >= 0.1   && < 0.2
-               , persistent    >= 0.6   && < 0.7
+  build-depends: base           >= 4     && < 5
+               , text           >= 0.11  && < 0.12
+               , bytestring     >= 0.9.1 && < 0.10
+               , friendly-time  >= 0.1   && < 0.2
+               , gravatar       >= 0.4   && < 0.5
+               , persistent     >= 0.7   && < 0.8
+               , wai            >= 1.0   && < 1.1
+               , yesod          >= 0.10  && < 0.11
+               , yesod-auth     >= 0.8   && < 0.9
+               , yesod-form     >= 0.4   && < 0.5
+               , yesod-markdown >= 0.3   && < 0.4
+
                , template-haskell
                , directory
                , time

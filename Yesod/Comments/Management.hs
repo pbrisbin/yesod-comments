@@ -32,14 +32,15 @@
 -------------------------------------------------------------------------------
 module Yesod.Comments.Management
     ( CommentsAdmin
-    , CommentsAdminRoute(..)
+    -- FIXME:
+    --, CommentsAdminRoute(..) 
     , getCommentsAdmin
     ) where
 
 import Yesod
 import Yesod.Auth
 import Yesod.Comments.Core
-import Yesod.Goodies
+import Yesod.Markdown
 import Data.List (sortBy)
 import Control.Monad (forM, unless)
 import Data.List (nub, sort)
@@ -139,7 +140,7 @@ getDeleteR tid cid = withUserComment tid cid $ \comment -> do
     tm <- getRouteToMaster
     deleteComment comment
     setMessage "comment deleted."
-    redirect RedirectTemporary $ tm OverviewR
+    redirect $ tm OverviewR
 
 getThreadedComments :: (YesodAuth m, YesodComments m) => GHandler s m [(ThreadId, [Comment])]
 getThreadedComments = do
