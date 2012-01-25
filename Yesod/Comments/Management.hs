@@ -32,9 +32,8 @@
 -------------------------------------------------------------------------------
 module Yesod.Comments.Management
     ( CommentsAdmin
-    -- FIXME:
-    --, CommentsAdminRoute(..) 
     , getCommentsAdmin
+    , Route(..)
     ) where
 
 import Yesod
