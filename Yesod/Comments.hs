@@ -97,7 +97,7 @@ addCommentsAuth tid = do
         login :: Yesod m => GWidget s m ()
         login = do
             mroute <- lift $ do
-                setUltDest'
+                setUltDestCurrent
                 fmap authRoute getYesod
 
             case mroute of
