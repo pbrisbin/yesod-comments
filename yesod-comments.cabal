@@ -24,8 +24,8 @@ library
                , bytestring     >= 0.9.1 && < 0.10
                , friendly-time  >= 0.1   && < 0.2
                , gravatar       >= 0.4   && < 0.5
-               , persistent     >= 0.7   && < 0.8
-               , wai            >= 1.0   && < 1.1
+               , persistent     >= 0.8   && < 0.9
+               , wai            >= 1.1   && < 1.2
                , yesod          >= 0.10  && < 0.11
                , yesod-auth     >= 0.8   && < 0.9
                , yesod-form     >= 0.4   && < 0.5
