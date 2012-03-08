@@ -24,6 +24,7 @@ import Yesod
 import Yesod.Auth
 import Yesod.Comments.Core
 import Network.Gravatar
+import Data.Text (Text)
 
 -- | Comments that anyone can enter anonymously
 addComments :: (RenderMessage m FormMessage, YesodComments m)
@@ -91,8 +92,8 @@ addCommentsAuth tid = do
     |]
 
     where
-        img :: Email -> String
-        img e = gravatarImg e defaultOptions { gDefault = Just MM, gSize = Just $ Size 48 }
+        img :: Text -> String
+        img = gravatar def { gDefault = Just MM, gSize = Just $ Size 48 }
 
         login :: Yesod m => GWidget s m ()
         login = do
