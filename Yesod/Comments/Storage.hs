@@ -33,7 +33,7 @@ module Yesod.Comments.Storage
 
 import Yesod
 import Database.Persist.GenericSql (SqlPersist)
-import Yesod.Comments.Core    (Comment(..), ThreadId, CommentId)
+import Yesod.Comments.Core    (Comment(..))
 import Yesod.Markdown         (Markdown(..))
 import Data.Time.Clock        (UTCTime)
 import qualified Data.Text as T
