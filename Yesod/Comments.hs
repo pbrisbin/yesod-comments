@@ -4,9 +4,9 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments
--- Copyright   :  (c) Patrick Brisbin 2010 
+-- Copyright   :  (c) Patrick Brisbin 2010
 -- License     :  as-is
--- Maintainer  :  pbrisbin@gmail.com 
+-- Maintainer  :  pbrisbin@gmail.com
 -- Stability   :  unstable
 -- Portability :  unportable
 --

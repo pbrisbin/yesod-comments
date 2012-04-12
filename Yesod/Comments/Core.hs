@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments.Core
--- Copyright   :  (c) Patrick Brisbin 2010 
+-- Copyright   :  (c) Patrick Brisbin 2010
 -- License     :  as-is
 --
 -- Maintainer  :  pbrisbin@gmail.com
@@ -62,14 +62,14 @@ class Yesod m => YesodComments m where
     -- | Load all comments, possibly filtered to a single thread.
     loadComments :: Maybe ThreadId -> GHandler s m [Comment]
 
-    -- | If using Auth, provide the function to get from a user id to 
-    --   the string to use as the commenter's username. This should 
+    -- | If using Auth, provide the function to get from a user id to
+    --   the string to use as the commenter's username. This should
     --   return something friendly probably pulled from the user's
     --   profile on your site.
     displayUser :: AuthId m -> GHandler s m T.Text
     displayUser _ = return "" -- fixme: use toSinglePiece in new auth pkg
 
-    -- | If using Auth, provide the function to get from a user id to 
+    -- | If using Auth, provide the function to get from a user id to
     --   the string to use as the commenter's email.
     displayEmail :: AuthId m -> GHandler s m T.Text
     displayEmail _ = return ""
@@ -101,9 +101,9 @@ commentFromForm tid cf = do
     now <- liftIO getCurrentTime
     ip  <- return . show . remoteHost =<< waiRequest
     cid <- getNextCommentId tid
-    return Comment 
-        { threadId  = tid 
-        , commentId = cid 
+    return Comment
+        { threadId  = tid
+        , commentId = cid
         , timeStamp = now
         , ipAddress = T.pack ip
         , userName  = formUser    cf
@@ -247,7 +247,7 @@ showHelper comment (username, email) = do
             <div .attribution>
                 <p>
                     <span .avatar>
-                        <img src="#{img email}"> 
+                        <img src="#{img email}">
 
                     <a href="##{anchor}" id="#{anchor}">#{commentTimestamp}
                     , #{username} wrote:

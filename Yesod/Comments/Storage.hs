@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments.Storage
--- Copyright   :  (c) Patrick Brisbin 2010 
+-- Copyright   :  (c) Patrick Brisbin 2010
 -- License     :  as-is
 --
 -- Maintainer  :  pbrisbin@gmail.com
@@ -18,7 +18,7 @@
 --
 -------------------------------------------------------------------------------
 module Yesod.Comments.Storage
-    ( 
+    (
     -- * Persist
     -- $persist
       getCommentPersist
