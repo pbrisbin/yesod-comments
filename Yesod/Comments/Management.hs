@@ -33,7 +33,7 @@
 module Yesod.Comments.Management
     ( CommentsAdmin
     -- FIXME:
-    --, CommentsAdminRoute(..) 
+    --, CommentsAdminRoute(..)
     , getCommentsAdmin
     ) where
 
@@ -53,9 +53,9 @@ data CommentsAdmin = CommentsAdmin
 getCommentsAdmin :: a -> CommentsAdmin
 getCommentsAdmin = const CommentsAdmin
 
-mkYesodSub "CommentsAdmin" 
+mkYesodSub "CommentsAdmin"
     [ ClassP ''YesodAuth     [ VarT $ mkName "master" ]
-    , ClassP ''YesodComments [ VarT $ mkName "master" ] ] 
+    , ClassP ''YesodComments [ VarT $ mkName "master" ] ]
     [parseRoutes|
         /                               OverviewR  GET
         /view/#ThreadId/#CommentId      ViewR      GET
