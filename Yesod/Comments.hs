@@ -101,8 +101,12 @@ addCommentsAuth tid = do
     |]
 
     where
-
-        img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 48 }
+        options = GravatarOptions { gDefault = Just MM
+                                  , gSize = Just $ Size 48
+                                  , gForceDefault = ForceDefault False
+                                  , gRating = Nothing
+                                  }
+        img email = gravatar options email
 
 helper :: Int -> String
 helper 0 = "no comments"
@@ -112,7 +116,7 @@ helper n = show n ++ " comments"
 -- | Show the authroute as a link if set up
 login :: Yesod m => GWidget s m ()
 login = do
-    lift $ setUltDest' -- so we come back here after login
+    lift $ setUltDestCurrent -- so we come back here after login
     mroute <- lift $ fmap authRoute getYesod
     case mroute of
         Just r  -> [whamlet|<a href="@{r}">log in|]

@@ -32,6 +32,7 @@ module Yesod.Comments.Storage
     ) where
 
 import Yesod
+import Database.Persist.GenericSql (SqlPersist)
 import Yesod.Comments.Core    (Comment(..), ThreadId, CommentId)
 import Yesod.Markdown         (Markdown(..))
 import Data.Time.Clock        (UTCTime)
@@ -88,7 +89,7 @@ fromSqlComment sqlComment = Comment
     , isAuth    = sqlCommentIsAuth    sqlComment
     }
 
-getCommentPersist :: (YesodPersist m, PersistUnique (YesodPersistBackend m) (GHandler s m)) =>T.Text -> Int -> GHandler s m (Maybe Comment)
+getCommentPersist :: (YesodPersist m, YesodPersistBackend m ~ SqlPersist) => T.Text -> Int -> GHandler s m (Maybe Comment)
 getCommentPersist tid cid = return . fmap (fromSqlComment . entityVal) =<< runDB (getBy $ UniqueSqlComment tid cid)
 
 storeCommentPersist :: (YesodPersist m, PersistStore (YesodPersistBackend m) (GHandler s m)) => Comment -> GHandler s m ()
@@ -106,7 +107,7 @@ deleteCommentPersist :: (YesodPersist m, PersistUnique (YesodPersistBackend m) (
 deleteCommentPersist c = return . const () =<< runDB (deleteBy $ UniqueSqlComment (threadId c) (commentId c))
 
 -- | Use @'Nothing'@ to retrieve all comments site-wide
-loadCommentsPersist :: (YesodPersist m, PersistQuery (YesodPersistBackend m) (GHandler s m)) => Maybe T.Text -> GHandler s m [Comment]
+loadCommentsPersist :: (YesodPersist m, YesodPersistBackend m ~ SqlPersist) => Maybe T.Text -> GHandler s m [Comment]
 loadCommentsPersist (Just tid) = return . fmap (fromSqlComment . entityVal) =<< runDB (selectList [SqlCommentThreadId ==. tid] [Asc SqlCommentCommentId])
 loadCommentsPersist Nothing    = return . fmap (fromSqlComment . entityVal) =<< runDB (selectList []                           [Asc SqlCommentCommentId])
 

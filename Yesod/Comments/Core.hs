@@ -258,8 +258,12 @@ showHelper comment (username, email) = do
         |]
 
     where
-
-        img email = gravatarImg email defaultOptions { gDefault = Just MM, gSize = Just $ Size 20 }
+        options = GravatarOptions { gDefault = Just MM
+                                  , gSize = Just $ Size 20
+                                  , gForceDefault = ForceDefault False
+                                  , gRating = Nothing
+                                  }
+        img email = gravatar options email
 
 -- | As the final step before insert, this is called to get the next
 --   comment id for the thread. super-high concurrency is probably not
