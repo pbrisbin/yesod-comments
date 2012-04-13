@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments.Core
--- Copyright   :  (c) Patrick Brisbin 2010 
+-- Copyright   :  (c) Patrick Brisbin 2010
 -- License     :  as-is
 --
 -- Maintainer  :  pbrisbin@gmail.com
@@ -52,14 +52,14 @@ class Yesod m => YesodComments m where
     deleteComment :: Comment -> GHandler s m ()
     loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
 
-    -- | If using Auth, provide the function to get from a user id to 
-    --   the string to use as the commenter's username. This should 
+    -- | If using Auth, provide the function to get from a user id to
+    --   the string to use as the commenter's username. This should
     --   return something friendly probably pulled from the user's
     --   profile on your site.
     displayUser :: AuthId m -> GHandler s m Text
     displayUser _ = return ""
 
-    -- | If using Auth, provide the function to get from a user id to 
+    -- | If using Auth, provide the function to get from a user id to
     --   the string to use as the commenter's email.
     displayEmail :: AuthId m -> GHandler s m Text
     displayEmail _ = return ""
@@ -177,7 +177,7 @@ showHelper comment (username, email) = do
             <div .attribution>
                 <p>
                     <span .avatar>
-                        <img src="#{img email}"> 
+                        <img src="#{img email}">
 
                     <a href="##{anchor}" id="#{anchor}">#{commentTimestamp}
                     , #{username} wrote:
@@ -220,5 +220,5 @@ redirectCurrentRoute = do
         Just r  -> redirect $ tm r
         Nothing -> notFound
 
-commentLabel :: FieldSettings Text
+commentLabel ::  FieldSettings master
 commentLabel = "Comment" { fsTooltip = Just "Comments are parsed as pandoc-style markdown." }

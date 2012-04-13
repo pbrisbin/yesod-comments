@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments.Storage
--- Copyright   :  (c) Patrick Brisbin 2010 
+-- Copyright   :  (c) Patrick Brisbin 2010
 -- License     :  as-is
 --
 -- Maintainer  :  pbrisbin@gmail.com
@@ -18,7 +18,7 @@
 --
 -------------------------------------------------------------------------------
 module Yesod.Comments.Storage
-    ( 
+    (
     -- * Persist
     -- $persist
       getCommentPersist
@@ -32,10 +32,10 @@ module Yesod.Comments.Storage
     ) where
 
 import Yesod
-import Yesod.Comments.Core         (Comment(..), ThreadId, CommentId)
-import Yesod.Markdown              (Markdown(..))
-import Data.Time.Clock             (UTCTime)
 import Database.Persist.GenericSql (SqlPersist)
+import Yesod.Comments.Core    (Comment(..))
+import Yesod.Markdown         (Markdown(..))
+import Data.Time.Clock        (UTCTime)
 import qualified Data.Text as T
 
 -- $persist
