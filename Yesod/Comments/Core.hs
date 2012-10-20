@@ -189,7 +189,7 @@ showHelper comment (username, email) = do
 
     where
         img :: Text -> String
-        img = gravatar def { gDefault = Just MM, gSize = Just $ Size 20 }
+        img = gravatar defaultConfig { gDefault = Just MM, gSize = Just $ Size 20 }
 
 -- | As the final step before insert, this is called to get the next
 --   comment id for the thread. super-high concurrency is probably not

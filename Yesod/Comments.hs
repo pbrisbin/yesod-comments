@@ -93,7 +93,7 @@ addCommentsAuth tid = do
 
     where
         img :: Text -> String
-        img = gravatar def { gDefault = Just MM, gSize = Just $ Size 48 }
+        img = gravatar defaultConfig { gDefault = Just MM, gSize = Just $ Size 48 }
 
         login :: Yesod m => GWidget s m ()
         login = do
