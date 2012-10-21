@@ -14,8 +14,8 @@
 -------------------------------------------------------------------------------
 module Yesod.Comments.Form
   ( CommentForm(..)
-  , commentFromForm
   , commentForm
+  , commentFromForm
   , runForm
   ) where
 
@@ -35,7 +35,6 @@ type Form s m x = Html -> MForm s m (FormResult x, GWidget s m ())
 data CommentForm = CommentForm
     { formUser    :: UserDetails
     , formComment :: Markdown
-    , formIsAuth  :: Bool
     }
 
 commentFromForm :: YesodComments m => ThreadId -> CommentForm -> GHandler s m Comment
@@ -52,7 +51,7 @@ commentFromForm thread cf = do
         , userName  = textUserName $ formUser cf
         , userEmail = emailAddress $ formUser cf
         , content   = formComment cf
-        , isAuth    = formIsAuth  cf
+        , isAuth    = True
         }
 
     where
@@ -65,9 +64,7 @@ commentFromForm thread cf = do
 
 commentForm :: RenderMessage m FormMessage => UserDetails -> Form s m CommentForm
 commentForm udetails = renderBootstrap $ CommentForm
-    <$> pure udetails
-    <*> areq markdownField commentLabel Nothing
-    <*> pure True
+    <$> pure udetails <*> areq markdownField commentLabel Nothing
 
     where
         commentLabel ::  FieldSettings master
