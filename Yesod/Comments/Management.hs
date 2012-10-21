@@ -38,8 +38,12 @@ module Yesod.Comments.Management
 
 import Yesod
 import Yesod.Auth
-import Yesod.Comments.Core
 import Yesod.Markdown
+
+import Yesod.Comments.Core
+import Yesod.Comments.Form
+import Yesod.Comments.View
+
 import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad (forM, unless)
 import Data.List (sortBy, nub)
@@ -61,7 +65,7 @@ mkYesodSub "CommentsAdmin"
         /delete/#ThreadId/#CommentId    DeleteR    GET
         |]
 
-getOverviewR :: (YesodAuth m, YesodComments m) => GHandler CommentsAdmin m RepHtml
+getOverviewR :: YesodComments m => GHandler CommentsAdmin m RepHtml
 getOverviewR = do
     _       <- requireAuthId
     threads <- getThreadedComments

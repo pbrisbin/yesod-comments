@@ -14,17 +14,9 @@
 -------------------------------------------------------------------------------
 module Yesod.Comments.Core
     ( Comment(..)
-    , CommentForm(..)
     , CommentId
     , ThreadId
     , YesodComments (..)
-    , Form
-    , commentFromForm
-    , commentForm
-    , commentLabel
-    , handleForm
-    , showComments
-    , showComment
     , getNextCommentId
     , isCommentingUser
     ) where
@@ -32,13 +24,9 @@ module Yesod.Comments.Core
 import Yesod
 import Yesod.Auth
 import Yesod.Markdown
-import Control.Applicative ((<$>), (<*>), pure)
-import Data.Text           (Text)
-import Data.Time           (UTCTime, getCurrentTime)
-import Data.Time.Format.Human
-import Network.Gravatar
-import Network.Wai         (remoteHost)
-import qualified Data.Text as T
+
+import Data.Text (Text)
+import Data.Time (UTCTime)
 
 type ThreadId  = Text
 type CommentId = Int
@@ -70,112 +58,11 @@ data Comment = Comment
     , userName  :: Text
     , userEmail :: Text
     , content   :: Markdown
-    , isAuth    :: Bool
+    , isAuth    :: Bool -- ^ compatability field
     }
 
 instance Eq Comment where
     a == b = (threadId a == threadId b) && (commentId a == commentId b)
-
-data CommentForm = CommentForm
-    { formUser    :: Text
-    , formEmail   :: Text
-    , formComment :: Markdown
-    , formIsAuth  :: Bool
-    }
-
-type Form s m x = Html -> MForm s m (FormResult x, GWidget s m ())
-
-commentFromForm :: YesodComments m => ThreadId -> CommentForm -> GHandler s m Comment
-commentFromForm tid cf = do
-    now <- liftIO getCurrentTime
-    ip  <- fmap (show . remoteHost) waiRequest
-    cid <- getNextCommentId tid
-
-    return Comment 
-        { threadId  = tid 
-        , commentId = cid 
-        , timeStamp = now
-        , ipAddress = T.pack ip
-        , userName  = formUser    cf
-        , userEmail = formEmail   cf
-        , content   = formComment cf
-        , isAuth    = formIsAuth  cf
-        }
-
-commentForm:: RenderMessage m FormMessage
-           => Text -- ^ Text version of uid
-           -> Text -- ^ user's email
-           -> Form s m CommentForm
-commentForm user email = renderBootstrap $ CommentForm
-    <$> pure user <*> pure email
-    <*> areq markdownField commentLabel Nothing
-    <*> pure True
-
-handleForm :: YesodComments m => FormResult CommentForm -> ThreadId -> GWidget s m ()
-handleForm (FormSuccess cf) tid = lift $ do
-    storeComment =<< commentFromForm tid cf
-    setMessage "comment added."
-    redirectCurrentRoute
-
-handleForm _ _ = return ()
-
-showComment :: (YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
-showComment comment = do
-    let cusername = userName comment
-
-    (cuname, cemail) <-
-        if isAuth comment
-            then case fromPathPiece $ cusername of
-                Just uid -> do
-                    uname <- lift $ displayUser  uid
-                    email <- lift $ displayEmail uid
-                    return (uname, email)
-                _ -> return (cusername, userEmail comment)
-            else return (cusername, userEmail comment)
-
-    showHelper comment (cuname, cemail)
-
-showComments :: [Comment] -> (Comment -> GWidget s m ()) -> GWidget s m ()
-showComments comments f = [whamlet|
-    <div .list>
-        $if not $ null comments
-            <h4>Showing #{toHtml $ helper $ length comments}:
-
-            $forall comment <- comments
-                ^{f comment}
-    |]
-
-    where
-        -- pluralize comments
-        helper :: Int -> String
-        helper 0 = "no comments"
-        helper 1 = "1 comment"
-        helper n = show n ++ " comments"
-
-showHelper :: Comment -> (Text,Text) -> GWidget s m ()
-showHelper comment (username, email) = do
-    commentTimestamp <- lift . liftIO . humanReadableTime $ timeStamp comment
-
-    let anchor = "comment_" ++ show (commentId comment)
-
-    [whamlet|
-        <div .comment>
-            <div .attribution>
-                <p>
-                    <span .avatar>
-                        <img src="#{img email}">
-
-                    <a href="##{anchor}" id="#{anchor}">#{commentTimestamp}
-                    , #{username} wrote:
-
-            <div .content>
-                <blockquote>
-                    #{markdownToHtml $ content comment}
-        |]
-
-    where
-        img :: Text -> String
-        img = gravatar defaultConfig { gDefault = Just MM, gSize = Just $ Size 20 }
 
 -- | As the final step before insert, this is called to get the next
 --   comment id for the thread. super-high concurrency is probably not
@@ -195,16 +82,3 @@ isCommentingUser comment = do
     return $ case muid of
         Just uid -> isAuth comment && toPathPiece uid == userName comment
         _        -> False
-
--- | Redirect back to the current route after a POST request. Calls not
---   found if the current route is unknown.
-redirectCurrentRoute :: Yesod m => GHandler s m ()
-redirectCurrentRoute = do
-    tm <- getRouteToMaster
-    mr <- getCurrentRoute
-    case mr of
-        Just r  -> redirect $ tm r
-        Nothing -> notFound
-
-commentLabel ::  FieldSettings master
-commentLabel = "Comment" { fsTooltip = Just "Comments are parsed as pandoc-style markdown." }

@@ -21,7 +21,11 @@ module Yesod.Comments
 
 import Yesod
 import Yesod.Auth
+
 import Yesod.Comments.Core
+import Yesod.Comments.Form
+import Yesod.Comments.View
+
 import Network.Gravatar
 import Data.Text (Text)
 
@@ -46,7 +50,7 @@ addComments tid = do
 
     [whamlet|
         <div .yesod_comments>
-            ^{showComments comments showComment}
+            ^{showComments comments}
 
             $if isAuthenticated
                 <div .avatar>
