@@ -16,6 +16,9 @@ library
   exposed-modules: Yesod.Comments
                  , Yesod.Comments.Core
                  , Yesod.Comments.Storage
+                 , Yesod.Comments.Utils
+                 , Yesod.Comments.Form
+                 , Yesod.Comments.View
                  , Yesod.Comments.Management
 
   -- Packages needed in order to build this package.
