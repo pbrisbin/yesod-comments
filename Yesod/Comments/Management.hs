@@ -238,3 +238,12 @@ handleFormEdit r (FormSuccess cf) comment = lift $ do
     redirect r
 
 handleFormEdit _ _ _ = return ()
+
+-- | Returns False when not logged in.
+isCommentingUser :: YesodAuth m => Comment -> GHandler s m Bool
+isCommentingUser comment = do
+    muid <- maybeAuthId
+    return $ case muid of
+        Just uid -> isAuth comment && toPathPiece uid == userName comment
+        _        -> False
+

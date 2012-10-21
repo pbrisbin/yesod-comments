@@ -19,17 +19,16 @@ module Yesod.Comments.View
 
 import Yesod
 import Yesod.Comments.Core
+import Yesod.Comments.Utils
 import Yesod.Markdown
 
-import Data.Text (Text)
 import Data.Time.Format.Human
-import Network.Gravatar
 
 showComments :: YesodComments m => [Comment] -> GWidget s m ()
 showComments comments = [whamlet|
     <div .list>
         $if not $ null comments
-            <h4>#{toHtml $ helper $ length comments}:
+            <h4>#{helper $ length comments}:
 
             $forall comment <- comments
                 ^{showComment comment}
@@ -44,36 +43,22 @@ showComments comments = [whamlet|
 
 showComment :: YesodComments m => Comment -> GWidget s m ()
 showComment comment = do
-    commentTimestamp <- lift . liftIO . humanReadableTime $ timeStamp comment
+    commentTimestamp         <- lift . liftIO . humanReadableTime $ timeStamp comment
+    UserDetails _ name email <- lift $ commentUserDetails comment
 
-    let cusername = userName comment
-    let anchor    = "comment_" ++ show (commentId comment)
-
-    (username, email) <-
-        if isAuth comment
-            then case fromPathPiece $ cusername of
-                Just uid -> do
-                    u <- lift $ displayUser  uid
-                    e <- lift $ displayEmail uid
-                    return (u, e)
-                _ -> return (cusername, userEmail comment)
-            else return (cusername, userEmail comment)
+    let anchor = "comment_" ++ show (commentId comment)
 
     [whamlet|
         <div .comment>
             <div .attribution>
                 <p>
                     <span .avatar>
-                        <img src="#{img email}">
+                        <img src="#{gravatar 20 email}">
 
                     <a href="##{anchor}" id="#{anchor}">#{commentTimestamp}
-                    , #{username} wrote:
+                    , #{name} wrote:
 
             <div .content>
                 <blockquote>
                     #{markdownToHtml $ content comment}
         |]
-
-    where
-        img :: Text -> String
-        img = gravatar defaultConfig { gDefault = Just MM, gSize = Just $ Size 20 }
