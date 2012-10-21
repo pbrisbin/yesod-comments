@@ -16,7 +16,6 @@
 -------------------------------------------------------------------------------
 module Yesod.Comments
     ( addComments
-    , addCommentsAuth
     , module Yesod.Comments.Core
     ) where
 
@@ -26,32 +25,11 @@ import Yesod.Comments.Core
 import Network.Gravatar
 import Data.Text (Text)
 
--- | Comments that anyone can enter anonymously
-addComments :: (RenderMessage m FormMessage, YesodComments m)
-            => ThreadId -- ^ the thread you're adding comments to
-            -> GWidget s m ()
-addComments tid = do
-    comments               <- lift $ loadComments (Just tid)
-    ((res, form), enctype) <- lift $ runFormPost commentForm
-
-    handleForm res tid
-
-    [whamlet|
-        <div .yesod_comments>
-            ^{showComments comments showComment}
-
-            <div .input>
-                <form enctype="#{enctype}" method="post" .form-stacked>
-                    ^{form}
-                    <div .actions>
-                        <button .btn .primary type="submit">Add comment
-    |]
-
 -- | Comments that require authentication
-addCommentsAuth :: (RenderMessage m FormMessage, YesodAuth m, YesodComments m)
+addComments :: (RenderMessage m FormMessage, YesodAuth m, YesodComments m)
                 => ThreadId -- ^ the thread you're adding comments to
                 -> GWidget s m ()
-addCommentsAuth tid = do
+addComments tid = do
     (isAuthenticated, uid, username, email) <- lift $ do
         muid <- maybeAuthId
         case muid of
@@ -62,13 +40,13 @@ addCommentsAuth tid = do
                 return (True, toPathPiece uid, uname, email)
 
     comments               <- lift $ loadComments (Just tid)
-    ((res, form), enctype) <- lift $ runFormPost (commentFormAuth uid email)
+    ((res, form), enctype) <- lift $ runFormPost (commentForm uid email)
 
     handleForm res tid
 
     [whamlet|
         <div .yesod_comments>
-            ^{showComments comments showCommentAuth}
+            ^{showComments comments showComment}
 
             $if isAuthenticated
                 <div .avatar>

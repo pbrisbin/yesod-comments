@@ -21,12 +21,10 @@ module Yesod.Comments.Core
     , Form
     , commentFromForm
     , commentForm
-    , commentFormAuth
     , commentLabel
     , handleForm
     , showComments
     , showComment
-    , showCommentAuth
     , getNextCommentId
     , isCommentingUser
     ) where
@@ -45,7 +43,7 @@ import qualified Data.Text as T
 type ThreadId  = Text
 type CommentId = Int
 
-class Yesod m => YesodComments m where
+class YesodAuth m => YesodComments m where
     getComment    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
     storeComment  :: Comment -> GHandler s m ()
     updateComment :: Comment -> Comment -> GHandler s m ()
@@ -104,22 +102,14 @@ commentFromForm tid cf = do
         , isAuth    = formIsAuth  cf
         }
 
-commentForm :: RenderMessage m FormMessage => Form s m CommentForm
-commentForm = renderBootstrap $ CommentForm
-    <$> areq textField  "Name"  Nothing
-    <*> areq emailField "Email" Nothing
-    <*> areq markdownField commentLabel Nothing
-    <*> pure False
-
-commentFormAuth :: RenderMessage m FormMessage
-                => Text -- ^ Text version of uid
-                -> Text -- ^ user's email
-                -> Form s m CommentForm
-commentFormAuth user email = renderBootstrap $ CommentForm
+commentForm:: RenderMessage m FormMessage
+           => Text -- ^ Text version of uid
+           -> Text -- ^ user's email
+           -> Form s m CommentForm
+commentForm user email = renderBootstrap $ CommentForm
     <$> pure user <*> pure email
     <*> areq markdownField commentLabel Nothing
     <*> pure True
-
 
 handleForm :: YesodComments m => FormResult CommentForm -> ThreadId -> GWidget s m ()
 handleForm (FormSuccess cf) tid = lift $ do
@@ -129,12 +119,8 @@ handleForm (FormSuccess cf) tid = lift $ do
 
 handleForm _ _ = return ()
 
-
-showComment :: Comment -> GWidget s m ()
-showComment comment = showHelper comment (userName comment, userEmail comment)
-
-showCommentAuth :: (YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
-showCommentAuth comment = do
+showComment :: (YesodAuth m, YesodComments m) => Comment -> GWidget s m ()
+showComment comment = do
     let cusername = userName comment
 
     (cuname, cemail) <-

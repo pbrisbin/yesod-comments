@@ -53,8 +53,7 @@ getCommentsAdmin :: a -> CommentsAdmin
 getCommentsAdmin = const CommentsAdmin
 
 mkYesodSub "CommentsAdmin"
-    [ ClassP ''YesodAuth     [ VarT $ mkName "master" ]
-    , ClassP ''YesodComments [ VarT $ mkName "master" ] ]
+    [ ClassP ''YesodComments [ VarT $ mkName "master" ] ]
     [parseRoutes|
         /                               OverviewR  GET
         /view/#ThreadId/#CommentId      ViewR      GET
@@ -79,7 +78,7 @@ getOverviewR = do
                          ^{showThreadedComments thread}
             |]
 
-getViewR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+getViewR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 getViewR tid cid = withUserComment tid cid $ \comment ->
     defaultLayout $ do
         setTitle "View comment"
@@ -114,7 +113,7 @@ getViewR tid cid = withUserComment tid cid $ \comment ->
         formatTimeStamp :: UTCTime -> String -- todo: make my own format
         formatTimeStamp = formatTime defaultTimeLocale rfc822DateFormat
 
-getEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+getEditR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 getEditR tid cid = withUserComment tid cid $ \comment -> do
     tm <- getRouteToMaster
     ((res, form), enctype) <- runFormPost $ commentFormEdit comment
@@ -133,17 +132,17 @@ getEditR tid cid = withUserComment tid cid $ \comment -> do
                             <button .btn .primary type="submit">Add comment
         |]
 
-postEditR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+postEditR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 postEditR = getEditR
 
-getDeleteR :: (YesodAuth m, YesodComments m) => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+getDeleteR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 getDeleteR tid cid = withUserComment tid cid $ \comment -> do
     tm <- getRouteToMaster
     deleteComment comment
     setMessage "comment deleted."
     redirect $ tm OverviewR
 
-getThreadedComments :: (YesodAuth m, YesodComments m) => GHandler s m [(ThreadId, [Comment])]
+getThreadedComments :: YesodComments m => GHandler s m [(ThreadId, [Comment])]
 getThreadedComments = do
     allComments <- loadComments Nothing
     allThreads  <- forM allComments $ \comment -> do
@@ -168,7 +167,7 @@ latest (t1, cs1) (t2,cs2) =
         latest' :: [Comment] -> UTCTime
         latest' = maximum . map timeStamp
 
-showThreadedComments :: (YesodAuth m, YesodComments m) => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
+showThreadedComments :: YesodComments m => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
 showThreadedComments (tid, comments) = [whamlet|
     <div .yesod_comments .thread>
         <h3>#{tid}
@@ -183,14 +182,14 @@ showThreadedComments (tid, comments) = [whamlet|
             [whamlet|
                 $if mine
                     <div .yours>
-                        ^{showCommentAuth comment}
+                        ^{showComment comment}
                         ^{updateLinks comment}
                 $else
                     <div>
-                        ^{showCommentAuth comment}
+                        ^{showComment comment}
                 |]
 
-updateLinks :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
+updateLinks :: YesodComments m => Comment -> GWidget CommentsAdmin m ()
 updateLinks (Comment tid cid _ _ _ _ _ _ )= do
     tm <- lift $ getRouteToMaster
     [whamlet|
@@ -206,7 +205,7 @@ updateLinks (Comment tid cid _ _ _ _ _ _ )= do
 -- | Find a comment by thread/id, ensure it's the logged in user's
 --   comment and execute an action on it. Gives notFound or
 --   permissionDenied in failing cases.
-withUserComment :: (YesodAuth m, YesodComments m)
+withUserComment :: YesodComments m
                 => ThreadId
                 -> CommentId
                 -> (Comment-> GHandler s m a)
