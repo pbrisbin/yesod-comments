@@ -45,7 +45,7 @@ instance Eq Comment where
     a == b = (threadId a == threadId b) && (commentId a == commentId b)
 
 data UserDetails = UserDetails
-    { textUserName :: Text
+    { textUserName :: Text -- ^ recommended: @toPathPiece userId@
     , friendlyName :: Text
     , emailAddress :: Text
     }
@@ -57,7 +57,7 @@ class YesodAuth m => YesodComments m where
     deleteComment :: Comment -> GHandler s m ()
     loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
 
-    -- | If @Nothing@ is returned, the user cannot comment. this can be
-    --   used to blacklist users.
+    -- | If @Nothing@ is returned, the user cannot add a comment. this can
+    --   be used to blacklist users. Note that comments left by them will
+    --   still appear until manually deleted.
     userDetails :: AuthId m -> GHandler s m (Maybe UserDetails)
-
