@@ -48,7 +48,7 @@ data UserDetails = UserDetails
     { textUserName :: Text -- ^ recommended: @toPathPiece userId@
     , friendlyName :: Text
     , emailAddress :: Text
-    }
+    } deriving Eq
 
 class YesodAuth m => YesodComments m where
     getComment    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
@@ -61,3 +61,18 @@ class YesodAuth m => YesodComments m where
     --   be used to blacklist users. Note that comments left by them will
     --   still appear until manually deleted.
     userDetails :: AuthId m -> GHandler s m (Maybe UserDetails)
+
+    -- | A thread's route for linking back from the admin subsite. If
+    --   @Nothing@, the links will not be present.
+    threadRoute :: Maybe (ThreadId -> Route m)
+    threadRoute = Nothing
+
+    -- | A route to the admin subsite's EditCommentR action. If @Nothing@,
+    --   the link will not be shown.
+    editRoute :: Maybe (ThreadId -> CommentId -> Route m)
+    editRoute = Nothing
+
+    -- | A route to the admin subsite's DeleteCommentR action. If
+    --   @Nothing@, the link will not be shown.
+    deleteRoute :: Maybe (ThreadId -> CommentId -> Route m)
+    deleteRoute = Nothing
