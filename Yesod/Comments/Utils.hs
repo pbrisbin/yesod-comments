@@ -15,7 +15,9 @@
 module Yesod.Comments.Utils
     ( commentUserDetails
     , currentUserDetails
+    , requireUserDetails
     , defaultUserDetails
+    , isCommentingUser
     , gravatar
     ) where
 
@@ -45,6 +47,14 @@ currentUserDetails = do
         Just uid -> userDetails uid
         _        -> return Nothing
 
+-- | Returns permissionDenied if user is not authorized
+requireUserDetails :: YesodComments m => GHandler s m (UserDetails)
+requireUserDetails = do
+    mudetails <- currentUserDetails
+    case mudetails of
+        Just udetails -> return udetails
+        _             -> permissionDenied "you must be logged in"
+
 -- | For a comment that was not authenticated or cannot be mapped, the
 --   default details are the id and email stored directly on the comment.
 defaultUserDetails :: Comment -> UserDetails
@@ -54,3 +64,10 @@ gravatar :: Int  -- ^ size
          -> Text -- ^ email
          -> String
 gravatar s = G.gravatar defaultConfig { gDefault = Just MM, gSize = Just $ Size s }
+
+isCommentingUser :: YesodComments m => Comment -> GHandler s m Bool
+isCommentingUser comment = do
+    mudetails <- currentUserDetails
+    cudetails <- commentUserDetails comment
+
+    return $ maybe False (== cudetails) mudetails
