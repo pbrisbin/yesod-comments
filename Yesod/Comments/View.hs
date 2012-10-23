@@ -23,6 +23,7 @@ import Yesod.Comments.Utils
 import Yesod.Markdown
 
 import Data.Time.Format.Human
+import Data.Monoid (mempty)
 
 showComments :: YesodComments m => [Comment] -> GWidget s m ()
 showComments comments = [whamlet|
@@ -43,13 +44,14 @@ showComments comments = [whamlet|
 
 showComment :: YesodComments m => Comment -> GWidget s m ()
 showComment comment = do
+    mine                     <- lift $ isCommentingUser comment
     commentTimestamp         <- lift . liftIO . humanReadableTime $ timeStamp comment
     UserDetails _ name email <- lift $ commentUserDetails comment
 
     let anchor = "comment_" ++ show (commentId comment)
 
     [whamlet|
-        <div .comment>
+        <div .comment :mine:.mine:>
             <div .attribution>
                 <p>
                     <span .avatar>
@@ -61,4 +63,21 @@ showComment comment = do
             <div .content>
                 <blockquote>
                     #{markdownToHtml $ content comment}
+
+            $if mine
+                 <div .controls>
+                    ^{commentControls editRoute deleteRoute (threadId comment) (commentId comment)}
         |]
+
+commentControls :: Maybe (ThreadId -> CommentId -> Route m) -- ^ Edit route
+                -> Maybe (ThreadId -> CommentId -> Route m) -- ^ Delete route
+                -> ThreadId -> CommentId -> GWidget s m ()
+commentControls e@(Just _) d@(Just _) thread cid = [whamlet|
+    ^{commentControls e Nothing thread cid}
+    \ | 
+    ^{commentControls Nothing d thread cid}
+    |]
+
+commentControls (Just editR) Nothing        thread cid = [whamlet|<a href="@{editR thread cid}">Edit|]
+commentControls Nothing      (Just deleteR) thread cid = [whamlet|<a href="@{deleteR thread cid}">Delete|]
+commentControls _ _ _ _ = mempty
