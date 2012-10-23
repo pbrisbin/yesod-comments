@@ -38,18 +38,16 @@ module Yesod.Comments.Management
 
 import Yesod
 import Yesod.Auth
-import Yesod.Markdown
 
 import Yesod.Comments.Core
+import Yesod.Comments.Utils
 import Yesod.Comments.Form
 import Yesod.Comments.View
 
-import Control.Applicative ((<$>), (<*>), pure)
 import Control.Monad (forM, unless)
 import Data.List (sortBy, nub)
-import Data.Time (UTCTime, formatTime)
+import Data.Time (UTCTime)
 import Language.Haskell.TH.Syntax hiding (lift)
-import System.Locale (defaultTimeLocale, rfc822DateFormat)
 
 data CommentsAdmin = CommentsAdmin
 
@@ -59,92 +57,68 @@ getCommentsAdmin = const CommentsAdmin
 mkYesodSub "CommentsAdmin"
     [ ClassP ''YesodComments [ VarT $ mkName "master" ] ]
     [parseRoutes|
-        /                               OverviewR  GET
-        /view/#ThreadId/#CommentId      ViewR      GET
-        /edit/#ThreadId/#CommentId      EditR      GET POST
-        /delete/#ThreadId/#CommentId    DeleteR    GET
+        /                            CommentsR      GET
+        /edit/#ThreadId/#CommentId   EditCommentR   GET POST
+        /delete/#ThreadId/#CommentId DeleteCommentR GET POST
         |]
 
-getOverviewR :: YesodComments m => GHandler CommentsAdmin m RepHtml
-getOverviewR = do
-    _       <- requireAuthId
-    threads <- getThreadedComments
+getCommentsR :: YesodComments m => GHandler CommentsAdmin m RepHtml
+getCommentsR = do
+    comments <- getThreadedComments
+
     defaultLayout $ do
-        setTitle "Comments administration"
+        setTitle "All comments"
 
         [whamlet|
-            <h1>Comments overview
-            <div .yesod_comments .overview>
-                $if null threads
-                    <p>No comments found.
-                $else
-                    $forall thread <- threads
-                         ^{showThreadedComments thread}
-            |]
-
-getViewR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getViewR tid cid = withUserComment tid cid $ \comment ->
-    defaultLayout $ do
-        setTitle "View comment"
-
-        [whamlet|
-            <h1>View comment
-            <div .yesod_comments .view>
-                <table>
-                    <tr>
-                        <th>Thread:
-                        <td>#{tid}
-                    <tr>
-                        <th>Comment Id:
-                        <td>#{cid}
-                    <tr>
-                        <th>Source IP:
-                        <td>#{ipAddress comment}
-                    <tr>
-                        <th>Time stamp:
-                        <td>#{formatTimeStamp $ timeStamp comment}
-
-                <p>
-                    <strong>Comment:
-
-                <blockquote>
-                    #{markdownToHtml $ content comment}
-
-                ^{updateLinks comment}
-            |]
+            <div .yesod_comments>
+                $forall (t, cs) <- comments
+                    <div .thread>
+                        <h3>
+                            ^{linkTo t}
+                        <div .comments>
+                            ^{showComments cs}
+        |]
 
     where
-        formatTimeStamp :: UTCTime -> String -- todo: make my own format
-        formatTimeStamp = formatTime defaultTimeLocale rfc822DateFormat
-
-getEditR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getEditR tid cid = withUserComment tid cid $ \comment -> do
-    tm <- getRouteToMaster
-    ((res, form), enctype) <- runFormPost $ commentFormEdit comment
-    defaultLayout $ do
-        setTitle "Edit comment"
-        handleFormEdit (tm OverviewR) res comment
-        [whamlet|
-            <h1>Edit comment
-            <div .yesod_comments .edit>
-                <h3>Update comment
-                <div .input>
-                    <form enctype="#{enctype}" method="post" .form-stacked>
-                        ^{form}
-
-                        <div .actions>
-                            <button .btn .primary type="submit">Add comment
+        linkTo :: YesodComments m => ThreadId -> GWidget s m ()
+        linkTo thread = [whamlet|
+            $maybe threadR <- threadRoute
+                <a href="@{threadR thread}">#{thread}
+            $nothing
+                #{thread}
         |]
 
-postEditR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-postEditR = getEditR
+getEditCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+getEditCommentR thread cid = withUserComment thread cid $ \c -> do
+    ud <- requireUserDetails
 
-getDeleteR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getDeleteR tid cid = withUserComment tid cid $ \comment -> do
+    defaultLayout $ do
+        setTitle "Edit comment"
+        [whamlet|
+            <div .yesod_comments>
+                ^{runFormEdit c thread (Just ud)}
+        |]
+
+postEditCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+postEditCommentR = getEditCommentR
+
+getDeleteCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+getDeleteCommentR _ _ = defaultLayout $ do
+    setTitle "Delete comment"
+    [whamlet|
+        <div .yesod_comments>
+            <p>Are you sure?
+            <form method="post" .form-stacked>
+                <div .actions>
+                    <button .btn .btn-danger type="submit">Delete comment
+    |]
+
+postDeleteCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+postDeleteCommentR thread cid = withUserComment thread cid $ \c -> do
     tm <- getRouteToMaster
-    deleteComment comment
+    deleteComment c
     setMessage "comment deleted."
-    redirect $ tm OverviewR
+    redirect $ tm CommentsR
 
 getThreadedComments :: YesodComments m => GHandler s m [(ThreadId, [Comment])]
 getThreadedComments = do
@@ -171,51 +145,9 @@ latest (t1, cs1) (t2,cs2) =
         latest' :: [Comment] -> UTCTime
         latest' = maximum . map timeStamp
 
-showThreadedComments :: YesodComments m => (ThreadId, [Comment]) -> GWidget CommentsAdmin m ()
-showThreadedComments (tid, comments) = [whamlet|
-    <div .yesod_comments .thread>
-        <h3>#{tid}
-        $forall comment <- comments
-            ^{showThreadComment comment}
-    |]
-
-    where
-        showThreadComment :: (YesodAuth m, YesodComments m) => Comment -> GWidget CommentsAdmin m ()
-        showThreadComment comment = do
-            mine <- lift $ isCommentingUser comment
-            [whamlet|
-                $if mine
-                    <div .yours>
-                        ^{showComment comment}
-                        ^{updateLinks comment}
-                $else
-                    <div>
-                        ^{showComment comment}
-                |]
-
-updateLinks :: YesodComments m => Comment -> GWidget CommentsAdmin m ()
-updateLinks (Comment tid cid _ _ _ _ _ _ )= do
-    tm <- lift $ getRouteToMaster
-    [whamlet|
-        <div .update_links>
-            <p>
-                <a href=@{tm $ ViewR tid cid}>View
-                \ | 
-                <a href=@{tm $ EditR tid cid}>Edit
-                \ | 
-                <a href=@{tm $ DeleteR tid cid}>Delete
-        |]
-
--- | Find a comment by thread/id, ensure it's the logged in user's
---   comment and execute an action on it. Gives notFound or
---   permissionDenied in failing cases.
-withUserComment :: YesodComments m
-                => ThreadId
-                -> CommentId
-                -> (Comment-> GHandler s m a)
-                -> GHandler s m a
-withUserComment tid cid f = do
-    mcomment <- getComment tid cid
+withUserComment :: YesodComments m => ThreadId -> CommentId -> (Comment -> GHandler s m RepHtml) -> GHandler s m RepHtml
+withUserComment thread cid f = do
+    mcomment <- getComment thread cid
     case mcomment of
         Just comment -> do
             _    <- requireAuthId
@@ -225,25 +157,11 @@ withUserComment tid cid f = do
 
         Nothing -> notFound
 
-commentFormEdit :: RenderMessage m FormMessage => Comment -> Form s m CommentForm
-commentFormEdit comment = renderBootstrap $ CommentForm
-    <$> pure "" <*> pure ""
-    <*> areq markdownField commentLabel (Just $ content comment)
-    <*> pure True
+runFormEdit :: YesodComments m => Comment -> ThreadId -> Maybe UserDetails -> GWidget CommentsAdmin m ()
+runFormEdit comment = runFormWith (Just comment) $ \cf -> do
+    tm <- getRouteToMaster
 
-handleFormEdit :: YesodComments m => Route m -> FormResult CommentForm -> Comment -> GWidget s m ()
-handleFormEdit r (FormSuccess cf) comment = lift $ do
     updateComment comment $ comment { content = formComment cf }
     setMessage "comment updated."
-    redirect r
 
-handleFormEdit _ _ _ = return ()
-
--- | Returns False when not logged in.
-isCommentingUser :: YesodAuth m => Comment -> GHandler s m Bool
-isCommentingUser comment = do
-    muid <- maybeAuthId
-    return $ case muid of
-        Just uid -> isAuth comment && toPathPiece uid == userName comment
-        _        -> False
-
+    redirect $ tm CommentsR
