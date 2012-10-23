@@ -14,29 +14,25 @@
 -- Stability   :  unstable
 -- Portability :  unportable
 --
--- Some pre-built function definitions for storing and loading comments.
---
 -------------------------------------------------------------------------------
 module Yesod.Comments.Storage
     (
     -- * Persist
     -- $persist
-      getCommentPersist
-    , storeCommentPersist
-    , updateCommentPersist
-    , deleteCommentPersist
-    , loadCommentsPersist
+      persistStorage
     , migrateComments
+
     -- * TODO
     -- $todo
     ) where
 
 import Yesod
+import Yesod.Comments.Core
+import Yesod.Markdown (Markdown(..))
+
+import Data.Text (Text)
+import Data.Time (UTCTime)
 import Database.Persist.GenericSql (SqlPersist)
-import Yesod.Comments.Core    (Comment(..))
-import Yesod.Markdown         (Markdown(..))
-import Data.Time.Clock        (UTCTime)
-import qualified Data.Text as T
 
 -- $persist
 --
@@ -44,26 +40,19 @@ import qualified Data.Text as T
 -- YesodPersist
 --
 
--- | Create the required types and migration function for use in a
---   general yesod app
---
---   todo: find out how to do the ThreadId/CommentId types with the new
---   persistent module
---
 share [mkPersist sqlSettings, mkMigrate "migrateComments"] [persist|
 SqlComment
-    threadId  T.Text Eq noreference
+    threadId  Text Eq noreference
     commentId Int    Eq Asc noreference
     timeStamp UTCTime
-    ipAddress T.Text
-    userName  T.Text
-    userEmail T.Text
+    ipAddress Text
+    userName  Text
+    userEmail Text
     content   Markdown Update
     isAuth    Bool
     UniqueSqlComment threadId commentId
 |]
 
--- | Make a 'SqlComment' out of a 'Comment' for passing off to insert
 toSqlComment :: Comment -> SqlComment
 toSqlComment comment = SqlComment
     { sqlCommentThreadId  = threadId  comment
@@ -76,7 +65,6 @@ toSqlComment comment = SqlComment
     , sqlCommentIsAuth    = isAuth    comment
     }
 
--- | Read a 'Comment' back from a selected 'SqlComment'
 fromSqlComment :: SqlComment -> Comment
 fromSqlComment sqlComment = Comment
     { threadId  = sqlCommentThreadId  sqlComment
@@ -89,27 +77,35 @@ fromSqlComment sqlComment = Comment
     , isAuth    = sqlCommentIsAuth    sqlComment
     }
 
-getCommentPersist :: (YesodPersistBackend m ~ SqlPersist, YesodPersist m) => T.Text -> Int -> GHandler s m (Maybe Comment)
-getCommentPersist tid cid = return . fmap (fromSqlComment . entityVal) =<< runDB (getBy $ UniqueSqlComment tid cid)
+persistStorage :: ( YesodPersist m
+                  , YesodPersistBackend m ~ SqlPersist
+                  ) => CommentStorage s m
+persistStorage = CommentStorage
+    { csGet = \tid cid -> do
+        mentity <- runDB (getBy $ UniqueSqlComment tid cid)
+        return $ fmap (fromSqlComment . entityVal) mentity
 
-storeCommentPersist :: (YesodPersist m, PersistStore (YesodPersistBackend m) (GHandler s m)) => Comment -> GHandler s m ()
-storeCommentPersist c = return . const () =<< runDB (insert $ toSqlComment c)
+    , csStore = \c -> do
+        _ <- runDB (insert $ toSqlComment c)
+        return ()
 
--- | Note, only updates the content record
-updateCommentPersist :: (YesodPersist m, PersistUnique (YesodPersistBackend m) (GHandler s m), PersistQuery (YesodPersistBackend m) (GHandler s m)) => Comment -> Comment -> GHandler s m ()
-updateCommentPersist (Comment tid cid _ _ _ _ _ _) (Comment _ _ _ _ _ _ newContent _) = do
-    mres <- runDB (getBy $ UniqueSqlComment tid cid)
-    case mres of
-        Just (Entity k _) -> runDB $ update k [SqlCommentContent =. newContent]
-        _          -> return ()
+    , csUpdate = \(Comment tid cid _ _ _ _ _ _) (Comment _ _ _ _ _ _ newContent _) -> do
+        mres <- runDB (getBy $ UniqueSqlComment tid cid)
+        case mres of
+            Just (Entity k _) -> runDB $ update k [SqlCommentContent =. newContent]
+            _                 -> return ()
 
-deleteCommentPersist :: (YesodPersist m, PersistUnique (YesodPersistBackend m) (GHandler s m)) => Comment -> GHandler s m ()
-deleteCommentPersist c = return . const () =<< runDB (deleteBy $ UniqueSqlComment (threadId c) (commentId c))
+    , csDelete = \c -> do
+        _ <- runDB (deleteBy $ UniqueSqlComment (threadId c) (commentId c))
+        return ()
 
--- | Use @'Nothing'@ to retrieve all comments site-wide
-loadCommentsPersist :: (YesodPersistBackend m ~ SqlPersist, YesodPersist m) => Maybe T.Text -> GHandler s m [Comment]
-loadCommentsPersist (Just tid) = return . fmap (fromSqlComment . entityVal) =<< runDB (selectList [SqlCommentThreadId ==. tid] [Asc SqlCommentCommentId])
-loadCommentsPersist Nothing    = return . fmap (fromSqlComment . entityVal) =<< runDB (selectList []                           [Asc SqlCommentCommentId])
+    , csLoad = \mthread -> do
+        entities <- case mthread of
+            (Just tid) -> runDB (selectList [SqlCommentThreadId ==. tid] [Asc SqlCommentCommentId])
+            Nothing    -> runDB (selectList []                           [Asc SqlCommentCommentId])
+
+        return $ map (fromSqlComment . entityVal) entities
+    }
 
 -- $todo
 --
