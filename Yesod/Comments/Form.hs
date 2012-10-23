@@ -17,6 +17,7 @@ module Yesod.Comments.Form
   , commentForm
   , commentFromForm
   , runForm
+  , runFormWith
   ) where
 
 import Yesod
@@ -34,17 +35,18 @@ type Form s m x = Html -> MForm s m (FormResult x, GWidget s m ())
 
 data CommentForm = CommentForm
     { formUser    :: UserDetails
+    , formThread  :: ThreadId
     , formComment :: Markdown
     }
 
-commentFromForm :: YesodComments m => ThreadId -> CommentForm -> GHandler s m Comment
-commentFromForm thread cf = do
+commentFromForm :: YesodComments m => CommentForm -> GHandler s m Comment
+commentFromForm cf = do
     now <- liftIO getCurrentTime
     ip  <- fmap (show . remoteHost) waiRequest
-    cid <- getNextCommentId thread
+    cid <- getNextCommentId $ formThread cf
 
     return Comment
-        { threadId  = thread
+        { threadId  = formThread cf
         , commentId = cid
         , timeStamp = now
         , ipAddress = T.pack ip
@@ -62,38 +64,38 @@ commentFromForm thread cf = do
         go [] = return 1
         go cs = return $ maximum (map commentId cs) + 1
 
-commentForm :: RenderMessage m FormMessage => UserDetails -> Form s m CommentForm
-commentForm udetails = renderBootstrap $ CommentForm
-    <$> pure udetails <*> areq markdownField commentLabel Nothing
+commentForm :: RenderMessage m FormMessage => ThreadId -> UserDetails -> Maybe Comment -> Form s m CommentForm
+commentForm thread udetails mcomment = renderBootstrap $ CommentForm
+    <$> pure udetails
+    <*> pure thread
+    <*> areq markdownField commentLabel (fmap content mcomment)
 
     where
         commentLabel ::  FieldSettings master
         commentLabel = "Comment" { fsTooltip = Just "Comments are parsed as pandoc-style markdown." }
 
 runForm :: YesodComments m => ThreadId -> Maybe UserDetails -> GWidget s m ()
-runForm _ Nothing = [whamlet|<h4>Please ^{login} to post a comment.|]
+runForm = runFormWith Nothing $ \cf -> do
+    tm <- getRouteToMaster
 
-    where
-        login :: Yesod m => GWidget s m ()
-        login = do
-            mroute <- lift $ do
-                setUltDestCurrent
-                fmap authRoute getYesod
+    storeComment =<< commentFromForm cf
+    setMessage "comment added."
 
-            case mroute of
-                Just r  -> [whamlet|<a href="@{r}">log in|]
-                Nothing -> [whamlet|log in|]
+    maybe notFound (redirect . tm) =<< getCurrentRoute
 
-runForm thread (Just ud@(UserDetails _ name email)) = do
-    ((res, form), enctype) <- lift $ runFormPost (commentForm ud)
+runFormWith :: YesodComments m
+            => Maybe Comment
+            -> (CommentForm -> GHandler s m ())
+            -> ThreadId
+            -> Maybe UserDetails
+            -> GWidget s m ()
+runFormWith _ _ _ Nothing = [whamlet|<h4>Please ^{login} to post a comment.|]
+runFormWith mcomment f thread (Just ud@(UserDetails _ name email)) = do
+    ((res, form), enctype) <- lift $ runFormPost (commentForm thread ud mcomment)
 
     case res of
-        FormSuccess cf -> lift $ do
-            storeComment =<< commentFromForm thread cf
-            setMessage "comment added."
-            redirectCurrentRoute
-
-        _ -> return ()
+        FormSuccess cf -> lift $ f cf
+        _              -> return ()
 
     [whamlet|
         <div .avatar>
@@ -113,11 +115,12 @@ runForm thread (Just ud@(UserDetails _ name email)) = do
                     <button .btn .primary type="submit">Add comment
     |]
 
-    where
-        redirectCurrentRoute :: Yesod m => GHandler s m ()
-        redirectCurrentRoute = do
-            tm <- getRouteToMaster
-            mr <- getCurrentRoute
-            case mr of
-                Just r  -> redirect $ tm r
-                Nothing -> notFound
+login :: Yesod m => GWidget s m ()
+login = do
+    mroute <- lift $ do
+        setUltDestCurrent
+        fmap authRoute getYesod
+
+    case mroute of
+        Just r  -> [whamlet|<a href="@{r}">log in|]
+        Nothing -> [whamlet|log in|]
