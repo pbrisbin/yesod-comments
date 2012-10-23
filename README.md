@@ -82,7 +82,7 @@ manually (for now).
 Add the subsite to your routes:
 
 ~~~
-/comments CommensAdminR CommentsAdmin getCommentsAdmin
+/comments CommentsAdminR CommentsAdmin getCommentsAdmin
 ~~~
 
 Optionally, define a few more functions in the `YesodComments` instance:
