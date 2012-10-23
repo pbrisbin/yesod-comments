@@ -18,6 +18,14 @@ module Yesod.Comments.Core
     , ThreadId
     , Comment(..)
     , UserDetails(..)
+    , CommentStorage(..)
+
+    -- we'll export these for now to ease the refactor
+    , getComment
+    , storeComment
+    , updateComment
+    , deleteComment
+    , loadComments
     ) where
 
 import Yesod
@@ -50,12 +58,32 @@ data UserDetails = UserDetails
     , emailAddress :: Text
     } deriving Eq
 
+data CommentStorage s m = CommentStorage
+    { csGet    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+    , csStore  :: Comment -> GHandler s m ()
+    , csUpdate :: Comment -> Comment -> GHandler s m ()
+    , csDelete :: Comment -> GHandler s m ()
+    , csLoad   :: Maybe ThreadId -> GHandler s m [Comment]
+    }
+
+getComment :: YesodComments m => ThreadId -> CommentId -> GHandler s m (Maybe Comment)
+getComment = csGet commentStorage
+
+storeComment :: YesodComments m => Comment -> GHandler s m ()
+storeComment = csStore commentStorage
+
+updateComment :: YesodComments m => Comment -> Comment -> GHandler s m ()
+updateComment = csUpdate commentStorage
+
+deleteComment :: YesodComments m => Comment -> GHandler s m ()
+deleteComment = csDelete commentStorage
+
+loadComments :: YesodComments m => Maybe ThreadId -> GHandler s m [Comment]
+loadComments = csLoad commentStorage
+
 class YesodAuth m => YesodComments m where
-    getComment    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
-    storeComment  :: Comment -> GHandler s m ()
-    updateComment :: Comment -> Comment -> GHandler s m ()
-    deleteComment :: Comment -> GHandler s m ()
-    loadComments  :: Maybe ThreadId -> GHandler s m [Comment]
+    -- | How to store and load comments from persistent storage.
+    commentStorage :: CommentStorage s m
 
     -- | If @Nothing@ is returned, the user cannot add a comment. this can
     --   be used to blacklist users. Note that comments left by them will
