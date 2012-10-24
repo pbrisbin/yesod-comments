@@ -19,13 +19,6 @@ module Yesod.Comments.Core
     , Comment(..)
     , UserDetails(..)
     , CommentStorage(..)
-
-    -- we'll export these for now to ease the refactor
-    , getComment
-    , storeComment
-    , updateComment
-    , deleteComment
-    , loadComments
     ) where
 
 import Yesod
@@ -66,21 +59,6 @@ data CommentStorage s m = CommentStorage
     , csLoad   :: Maybe ThreadId -> GHandler s m [Comment]
     }
 
-getComment :: YesodComments m => ThreadId -> CommentId -> GHandler s m (Maybe Comment)
-getComment = csGet commentStorage
-
-storeComment :: YesodComments m => Comment -> GHandler s m ()
-storeComment = csStore commentStorage
-
-updateComment :: YesodComments m => Comment -> Comment -> GHandler s m ()
-updateComment = csUpdate commentStorage
-
-deleteComment :: YesodComments m => Comment -> GHandler s m ()
-deleteComment = csDelete commentStorage
-
-loadComments :: YesodComments m => Maybe ThreadId -> GHandler s m [Comment]
-loadComments = csLoad commentStorage
-
 class YesodAuth m => YesodComments m where
     -- | How to store and load comments from persistent storage.
     commentStorage :: CommentStorage s m
@@ -90,10 +68,8 @@ class YesodAuth m => YesodComments m where
     --   still appear until manually deleted.
     userDetails :: AuthId m -> GHandler s m (Maybe UserDetails)
 
-    -- | A thread's route for linking back from the admin subsite. If
-    --   @Nothing@, the links will not be present.
-    threadRoute :: Maybe (ThreadId -> Route m)
-    threadRoute = Nothing
+    -- | A thread's route for linking back from the admin subsite
+    threadRoute :: ThreadId -> Route m
 
     -- | A route to the admin subsite's EditCommentR action. If @Nothing@,
     --   the link will not be shown.
