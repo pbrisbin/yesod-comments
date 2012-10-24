@@ -58,7 +58,7 @@ commentFromForm cf = do
 
     where
         getNextCommentId :: YesodComments m => ThreadId -> GHandler s m CommentId
-        getNextCommentId tid = go =<< loadComments (Just tid)
+        getNextCommentId tid = go =<< csLoad commentStorage (Just tid)
 
         go :: YesodComments m => [Comment] -> GHandler s m CommentId
         go [] = return 1
@@ -78,7 +78,7 @@ runForm :: YesodComments m => ThreadId -> Maybe UserDetails -> GWidget s m ()
 runForm = runFormWith Nothing $ \cf -> do
     tm <- getRouteToMaster
 
-    storeComment =<< commentFromForm cf
+    csStore commentStorage =<< commentFromForm cf
     setMessage "comment added."
 
     maybe notFound (redirect . tm) =<< getCurrentRoute

@@ -26,7 +26,7 @@ import Yesod.Comments.View
 
 addComments :: (RenderMessage m FormMessage, YesodComments m) => ThreadId -> GWidget s m ()
 addComments thread = do
-    comments  <- lift $ loadComments (Just thread)
+    comments  <- lift $ csLoad commentStorage (Just thread)
     mudetails <- lift $ currentUserDetails
 
     [whamlet|
