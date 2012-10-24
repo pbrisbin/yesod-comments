@@ -17,14 +17,8 @@
 --
 -------------------------------------------------------------------------------
 module Yesod.Comments.Storage
-    (
-    -- * Persist
-    -- $persist
-      persistStorage
+    ( persistStorage
     , migrateComments
-
-    -- * TODO
-    -- $todo
     ) where
 
 import Yesod
@@ -34,12 +28,6 @@ import Yesod.Markdown (Markdown(..))
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Database.Persist.GenericSql (SqlPersist)
-
--- $persist
---
--- Use these functions to store your comments in an instance of
--- YesodPersist
---
 
 share [mkPersist sqlSettings, mkMigrate "migrateComments"] [persist|
 SqlComment
@@ -56,28 +44,29 @@ SqlComment
 
 toSqlComment :: Comment -> SqlComment
 toSqlComment comment = SqlComment
-    { sqlCommentThreadId  = threadId  comment
-    , sqlCommentCommentId = commentId comment
-    , sqlCommentTimeStamp = timeStamp comment
-    , sqlCommentIpAddress = ipAddress comment
-    , sqlCommentUserName  = userName  comment
-    , sqlCommentUserEmail = userEmail comment
-    , sqlCommentContent   = content   comment
-    , sqlCommentIsAuth    = isAuth    comment
+    { sqlCommentCommentId = commentId comment
+    , sqlCommentThreadId  = cThreadId  comment
+    , sqlCommentTimeStamp = cTimeStamp comment
+    , sqlCommentIpAddress = cIpAddress comment
+    , sqlCommentUserName  = cUserName  comment
+    , sqlCommentUserEmail = cUserEmail comment
+    , sqlCommentContent   = cContent   comment
+    , sqlCommentIsAuth    = cIsAuth    comment
     }
 
 fromSqlComment :: SqlComment -> Comment
 fromSqlComment sqlComment = Comment
-    { threadId  = sqlCommentThreadId  sqlComment
-    , commentId = sqlCommentCommentId sqlComment
-    , timeStamp = sqlCommentTimeStamp sqlComment
-    , ipAddress = sqlCommentIpAddress sqlComment
-    , userName  = sqlCommentUserName  sqlComment
-    , userEmail = sqlCommentUserEmail sqlComment
-    , content   = sqlCommentContent   sqlComment
-    , isAuth    = sqlCommentIsAuth    sqlComment
+    { commentId = sqlCommentCommentId sqlComment
+    , cThreadId  = sqlCommentThreadId  sqlComment
+    , cTimeStamp = sqlCommentTimeStamp sqlComment
+    , cIpAddress = sqlCommentIpAddress sqlComment
+    , cUserName  = sqlCommentUserName  sqlComment
+    , cUserEmail = sqlCommentUserEmail sqlComment
+    , cContent   = sqlCommentContent   sqlComment
+    , cIsAuth    = sqlCommentIsAuth    sqlComment
     }
 
+-- | Store comments in an instance of YesodPersit with a SQL backend
 persistStorage :: ( YesodPersist m
                   , YesodPersistBackend m ~ SqlPersist
                   ) => CommentStorage s m
@@ -90,14 +79,14 @@ persistStorage = CommentStorage
         _ <- runDB (insert $ toSqlComment c)
         return ()
 
-    , csUpdate = \(Comment tid cid _ _ _ _ _ _) (Comment _ _ _ _ _ _ newContent _) -> do
+    , csUpdate = \(Comment cid tid _ _ _ _ _ _) (Comment _ _ _ _ _ _ newContent _) -> do
         mres <- runDB (getBy $ UniqueSqlComment tid cid)
         case mres of
             Just (Entity k _) -> runDB $ update k [SqlCommentContent =. newContent]
             _                 -> return ()
 
     , csDelete = \c -> do
-        _ <- runDB (deleteBy $ UniqueSqlComment (threadId c) (commentId c))
+        _ <- runDB (deleteBy $ UniqueSqlComment (cThreadId c) (commentId c))
         return ()
 
     , csLoad = \mthread -> do
@@ -107,8 +96,3 @@ persistStorage = CommentStorage
 
         return $ map (fromSqlComment . entityVal) entities
     }
-
--- $todo
---
--- Add more storage options...
---

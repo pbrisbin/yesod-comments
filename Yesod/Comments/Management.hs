@@ -16,19 +16,7 @@
 -- Stability     : unstable
 -- Portability   : unportable
 --
--- This module allows for self-management of comments by any
--- authenticating commenter on your site.
---
--- The use, add a route like so:
---
 -- > /comments CommentsAdminR CommentsAdmin getCommentsAdmin
---
--- Then place a link somewhere to @CommentsAdminR OverviewR@.
---
--- The overview page will show all of the comments (grouped by thread)
--- that the currently logged in user has left on the site along with
--- links to view more details, edit the comment content, or delete the
--- comment entirely.
 --
 -------------------------------------------------------------------------------
 module Yesod.Comments.Management
@@ -63,10 +51,6 @@ mkYesodSub "CommentsAdmin"
         /edit/#ThreadId/#CommentId   EditCommentR   GET POST
         /delete/#ThreadId/#CommentId DeleteCommentR GET POST
         |]
-
---
--- Handlers
---
 
 getCommentsR :: YesodComments m => GHandler CommentsAdmin m RepHtml
 getCommentsR = do
@@ -108,19 +92,17 @@ postDeleteCommentR thread cid = withUserComment thread cid $ \c -> do
     setMessage "comment deleted."
     redirect $ tm CommentsR
 
---
--- Helpers
---
-
+-- | Return tuples of thread id and associated comments sorted by most
+--   recently commented on thread.
 getThreadedComments :: YesodComments m => GHandler s m [(ThreadId, [Comment])]
 getThreadedComments = do
     allComments <- csLoad commentStorage Nothing
     allThreads  <- forM allComments $ \comment -> do
         mine <- isCommentingUser comment
-        return $ if mine then [threadId comment] else []
+        return $ if mine then [cThreadId comment] else []
 
     unsorted <- forM (nub $ concat allThreads) $ \tid ->
-        return (tid, filter ((== tid) . threadId) allComments)
+        return (tid, filter ((== tid) . cThreadId) allComments)
 
     return . sortBy latest $ unsorted
 
@@ -134,8 +116,10 @@ getThreadedComments = do
                 LT -> GT
 
         latest' :: [Comment] -> UTCTime
-        latest' = maximum . map timeStamp
+        latest' = maximum . map cTimeStamp
 
+-- | Halts with @permissionDenied@ or runs the action if the comment
+--   belongs to the currently logged in user
 withUserComment :: YesodComments m => ThreadId -> CommentId -> (Comment -> GHandler s m RepHtml) -> GHandler s m RepHtml
 withUserComment thread cid f = do
     mcomment <- csGet commentStorage thread cid
@@ -148,10 +132,11 @@ withUserComment thread cid f = do
 
         Nothing -> notFound
 
+-- | Runs the form and updates the comment on success
 runFormEdit :: YesodComments m => Comment -> ThreadId -> Maybe UserDetails -> GWidget CommentsAdmin m ()
 runFormEdit comment = runFormWith (Just comment) $ \cf -> do
     tm <- getRouteToMaster
-    csUpdate commentStorage comment $ comment { content = formComment cf }
+    csUpdate commentStorage comment $ comment { cContent = formComment cf }
     setMessage "comment updated."
     redirect $ tm CommentsR
 

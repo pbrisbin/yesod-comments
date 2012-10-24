@@ -45,7 +45,7 @@ showComments comments = [whamlet|
 showComment :: YesodComments m => Comment -> GWidget s m ()
 showComment comment = do
     mine                     <- lift $ isCommentingUser comment
-    commentTimestamp         <- lift . liftIO . humanReadableTime $ timeStamp comment
+    commentTimestamp         <- lift . liftIO . humanReadableTime $ cTimeStamp comment
     UserDetails _ name email <- lift $ commentUserDetails comment
 
     let anchor = "comment_" ++ show (commentId comment)
@@ -62,13 +62,14 @@ showComment comment = do
 
             <div .content>
                 <blockquote>
-                    #{markdownToHtml $ content comment}
+                    #{markdownToHtml $ cContent comment}
 
             $if mine
                  <div .controls>
-                    ^{commentControls editRoute deleteRoute (threadId comment) (commentId comment)}
+                    ^{commentControls editRoute deleteRoute (cThreadId comment) (commentId comment)}
         |]
 
+-- | Edit and Delete links if configured
 commentControls :: Maybe (ThreadId -> CommentId -> Route m) -- ^ Edit route
                 -> Maybe (ThreadId -> CommentId -> Route m) -- ^ Delete route
                 -> ThreadId -> CommentId -> GWidget s m ()

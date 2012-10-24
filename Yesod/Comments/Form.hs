@@ -46,14 +46,14 @@ commentFromForm cf = do
     cid <- getNextCommentId $ formThread cf
 
     return Comment
-        { threadId  = formThread cf
-        , commentId = cid
-        , timeStamp = now
-        , ipAddress = T.pack ip
-        , userName  = textUserName $ formUser cf
-        , userEmail = emailAddress $ formUser cf
-        , content   = formComment cf
-        , isAuth    = True
+        { commentId = cid
+        , cThreadId  = formThread cf
+        , cTimeStamp = now
+        , cIpAddress = T.pack ip
+        , cUserName  = textUserName $ formUser cf
+        , cUserEmail = emailAddress $ formUser cf
+        , cContent   = formComment cf
+        , cIsAuth    = True
         }
 
     where
@@ -68,12 +68,13 @@ commentForm :: RenderMessage m FormMessage => ThreadId -> UserDetails -> Maybe C
 commentForm thread udetails mcomment = renderBootstrap $ CommentForm
     <$> pure udetails
     <*> pure thread
-    <*> areq markdownField commentLabel (fmap content mcomment)
+    <*> areq markdownField commentLabel (fmap cContent mcomment)
 
     where
         commentLabel ::  FieldSettings master
         commentLabel = "Comment" { fsTooltip = Just "Comments are parsed as pandoc-style markdown." }
 
+-- | Run the form and stores the comment on successful submission
 runForm :: YesodComments m => ThreadId -> Maybe UserDetails -> GWidget s m ()
 runForm = runFormWith Nothing $ \cf -> do
     tm <- getRouteToMaster
@@ -81,8 +82,11 @@ runForm = runFormWith Nothing $ \cf -> do
     csStore commentStorage =<< commentFromForm cf
     setMessage "comment added."
 
+    -- redirect to current route
     maybe notFound (redirect . tm) =<< getCurrentRoute
 
+-- | Both handle form submission and present form HTML. On FormSuccess, run
+--   the given function on the submitted value.
 runFormWith :: YesodComments m
             => Maybe Comment
             -> (CommentForm -> GHandler s m ())

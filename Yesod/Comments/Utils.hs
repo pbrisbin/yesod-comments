@@ -35,11 +35,11 @@ import qualified Network.Gravatar as G
 commentUserDetails :: YesodComments m => Comment -> GHandler s m UserDetails
 commentUserDetails c =
     return . fromMaybe (defaultUserDetails c) =<<
-        case (isAuth c, fromPathPiece (userName c)) of
+        case (cIsAuth c, fromPathPiece (cUserName c)) of
             (True, Just uid) -> userDetails uid
             _                -> return Nothing
 
--- | Returns Nothing if user is not authenticated
+-- | Returns @Nothing@ if user is not authenticated
 currentUserDetails :: YesodComments m => GHandler s m (Maybe UserDetails)
 currentUserDetails = do
     muid <- maybeAuthId
@@ -47,7 +47,7 @@ currentUserDetails = do
         Just uid -> userDetails uid
         _        -> return Nothing
 
--- | Returns permissionDenied if user is not authorized
+-- | Halts with @permissionDenied@ if user is not authorized
 requireUserDetails :: YesodComments m => GHandler s m (UserDetails)
 requireUserDetails = do
     mudetails <- currentUserDetails
@@ -58,7 +58,7 @@ requireUserDetails = do
 -- | For a comment that was not authenticated or cannot be mapped, the
 --   default details are the id and email stored directly on the comment.
 defaultUserDetails :: Comment -> UserDetails
-defaultUserDetails c = UserDetails (userName c) (userName c) (userEmail c)
+defaultUserDetails c = UserDetails (cUserName c) (cUserName c) (cUserEmail c)
 
 gravatar :: Int  -- ^ size
          -> Text -- ^ email
