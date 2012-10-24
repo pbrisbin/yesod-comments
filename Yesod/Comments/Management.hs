@@ -1,10 +1,11 @@
-{-# LANGUAGE QuasiQuotes           #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
+{-# LANGUAGE QuasiQuotes                 #-}
+{-# LANGUAGE TemplateHaskell             #-}
+{-# LANGUAGE FlexibleInstances           #-}
+{-# LANGUAGE FlexibleContexts            #-}
+{-# LANGUAGE TypeFamilies                #-}
+{-# LANGUAGE MultiParamTypeClasses       #-}
+{-# LANGUAGE OverloadedStrings           #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module        : Yesod.Comments.Management
