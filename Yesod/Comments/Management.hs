@@ -47,6 +47,7 @@ import Yesod.Comments.View
 
 import Control.Monad (forM, unless)
 import Data.List (sortBy, nub)
+import Data.Text (Text)
 import Data.Time (UTCTime)
 import Language.Haskell.TH.Syntax hiding (lift)
 
@@ -63,67 +64,57 @@ mkYesodSub "CommentsAdmin"
         /delete/#ThreadId/#CommentId DeleteCommentR GET POST
         |]
 
+--
+-- Handlers
+--
+
 getCommentsR :: YesodComments m => GHandler CommentsAdmin m RepHtml
 getCommentsR = do
     comments <- getThreadedComments
 
-    defaultLayout $ do
-        setTitle "All comments"
+    layout "Your comments" [whamlet|
+        $forall (t, cs) <- comments
+            <div .thread>
+                <h3>
+                    <a href="@{threadRoute t}">#{t}
 
-        [whamlet|
-            <div .yesod_comments>
-                $forall (t, cs) <- comments
-                    <div .thread>
-                        <h3>
-                            ^{linkTo t}
-                        <div .comments>
-                            ^{showComments cs}
-        |]
-
-    where
-        linkTo :: YesodComments m => ThreadId -> GWidget s m ()
-        linkTo thread = [whamlet|
-            $maybe threadR <- threadRoute
-                <a href="@{threadR thread}">#{thread}
-            $nothing
-                #{thread}
+                <div .comments>
+                    ^{showComments cs}
         |]
 
 getEditCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 getEditCommentR thread cid = withUserComment thread cid $ \c -> do
     ud <- requireUserDetails
 
-    defaultLayout $ do
-        setTitle "Edit comment"
-        [whamlet|
-            <div .yesod_comments>
-                ^{runFormEdit c thread (Just ud)}
+    layout "Edit comment" [whamlet|
+        ^{runFormEdit c thread (Just ud)}
         |]
 
 postEditCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 postEditCommentR = getEditCommentR
 
 getDeleteCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getDeleteCommentR _ _ = defaultLayout $ do
-    setTitle "Delete comment"
-    [whamlet|
-        <div .yesod_comments>
-            <p>Are you sure?
-            <form method="post" .form-stacked>
-                <div .actions>
-                    <button .btn .btn-danger type="submit">Delete comment
+getDeleteCommentR _ _ = layout "Delete comment" [whamlet|
+    <p>Are you sure?
+    <form method="post" .form-stacked>
+        <div .actions>
+            <button .btn .btn-danger type="submit">Delete comment
     |]
 
 postDeleteCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
 postDeleteCommentR thread cid = withUserComment thread cid $ \c -> do
     tm <- getRouteToMaster
-    deleteComment c
+    csDelete commentStorage c
     setMessage "comment deleted."
     redirect $ tm CommentsR
 
+--
+-- Helpers
+--
+
 getThreadedComments :: YesodComments m => GHandler s m [(ThreadId, [Comment])]
 getThreadedComments = do
-    allComments <- loadComments Nothing
+    allComments <- csLoad commentStorage Nothing
     allThreads  <- forM allComments $ \comment -> do
         mine <- isCommentingUser comment
         return $ if mine then [threadId comment] else []
@@ -133,22 +124,21 @@ getThreadedComments = do
 
     return . sortBy latest $ unsorted
 
-latest :: (ThreadId, [Comment]) -> (ThreadId, [Comment]) -> Ordering
-latest (t1, cs1) (t2,cs2) =
-    -- note the comparason is reversed so that the more recent threads
-    -- will sort first
-    case compare (latest' cs1) (latest' cs2) of
-        EQ -> compare t1 t2
-        GT -> LT
-        LT -> GT
-
     where
+        latest :: (ThreadId, [Comment]) -> (ThreadId, [Comment]) -> Ordering
+        latest (t1, cs1) (t2, cs2) =
+            -- reversed comparason so more recent threads sort first
+            case compare (latest' cs1) (latest' cs2) of
+                EQ -> compare t1 t2
+                GT -> LT
+                LT -> GT
+
         latest' :: [Comment] -> UTCTime
         latest' = maximum . map timeStamp
 
 withUserComment :: YesodComments m => ThreadId -> CommentId -> (Comment -> GHandler s m RepHtml) -> GHandler s m RepHtml
 withUserComment thread cid f = do
-    mcomment <- getComment thread cid
+    mcomment <- csGet commentStorage thread cid
     case mcomment of
         Just comment -> do
             _    <- requireAuthId
@@ -161,8 +151,18 @@ withUserComment thread cid f = do
 runFormEdit :: YesodComments m => Comment -> ThreadId -> Maybe UserDetails -> GWidget CommentsAdmin m ()
 runFormEdit comment = runFormWith (Just comment) $ \cf -> do
     tm <- getRouteToMaster
-
-    updateComment comment $ comment { content = formComment cf }
+    csUpdate commentStorage comment $ comment { content = formComment cf }
     setMessage "comment updated."
-
     redirect $ tm CommentsR
+
+layout :: Yesod m => Text -> GWidget s m () -> GHandler s m RepHtml
+layout title inner = defaultLayout $ do
+    setTitle $ toHtml title
+
+    [whamlet|
+        <div .page_header>
+            <h1>#{title}
+
+        <div .yesod_comments>
+            ^{inner}
+    |]
