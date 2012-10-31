@@ -47,7 +47,7 @@ currentUserDetails = do
         Just uid -> userDetails uid
         _        -> return Nothing
 
--- | Halts with @permissionDenied@ if user is not authorized
+-- | Halts with @permissionDenied@ if user is not authenticated
 requireUserDetails :: YesodComments m => GHandler s m (UserDetails)
 requireUserDetails = do
     mudetails <- currentUserDetails
@@ -60,9 +60,8 @@ requireUserDetails = do
 defaultUserDetails :: Comment -> UserDetails
 defaultUserDetails c = UserDetails (cUserName c) (cUserName c) (cUserEmail c)
 
-gravatar :: Int  -- ^ size
-         -> Text -- ^ email
-         -> String
+-- | Given pixel size and email, return the gravatar url
+gravatar :: Int -> Text -> String
 gravatar s = G.gravatar defaultConfig { gDefault = Just MM, gSize = Just $ Size s }
 
 isCommentingUser :: YesodComments m => Comment -> GHandler s m Bool

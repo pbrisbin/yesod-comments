@@ -50,7 +50,7 @@ commentFromForm cf = do
         , cThreadId  = formThread cf
         , cTimeStamp = now
         , cIpAddress = T.pack ip
-        , cUserName  = textUserName $ formUser cf
+        , cUserName  = textUserId $ formUser cf
         , cUserEmail = emailAddress $ formUser cf
         , cContent   = formComment cf
         , cIsAuth    = True
@@ -66,8 +66,7 @@ commentFromForm cf = do
 
 commentForm :: RenderMessage m FormMessage => ThreadId -> UserDetails -> Maybe Comment -> Form s m CommentForm
 commentForm thread udetails mcomment = renderBootstrap $ CommentForm
-    <$> pure udetails
-    <*> pure thread
+    <$> pure udetails <*> pure thread
     <*> areq markdownField commentLabel (fmap cContent mcomment)
 
     where
@@ -85,8 +84,8 @@ runForm = runFormWith Nothing $ \cf -> do
     -- redirect to current route
     maybe notFound (redirect . tm) =<< getCurrentRoute
 
--- | Both handle form submission and present form HTML. On FormSuccess, run
---   the given function on the submitted value.
+-- | Both handle form submission and present form HTML. On @FormSuccess@,
+--   run the given function on the submitted value.
 runFormWith :: YesodComments m
             => Maybe Comment
             -> (CommentForm -> GHandler s m ())

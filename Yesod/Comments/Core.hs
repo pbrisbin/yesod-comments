@@ -31,7 +31,7 @@ import Data.Time  (UTCTime)
 type ThreadId  = Text
 type CommentId = Int
 
--- | The core data type a Comment
+-- | The core data type, a Comment
 data Comment = Comment
     { commentId  :: CommentId
     , cThreadId  :: ThreadId
@@ -46,24 +46,26 @@ data Comment = Comment
 instance Eq Comment where
     a == b = (cThreadId a == cThreadId b) && (commentId a == commentId b)
 
--- | Information about the User that's needed to store comments.
+-- | Information about the User needed to store comments.
 data UserDetails = UserDetails
-    { textUserName :: Text -- ^ Text version of user id, @toPathPiece
-                           --   userId@ is recommended. comments are stored
+    { textUserId   :: Text -- ^ Text version of a user id, @toPathPiece
+                           --   userId@ is recommended. Comments are stored
                            --   using this value so users can freely change
                            --   names without losing comments.
     , friendlyName :: Text -- ^ The name that's actually displayed
     , emailAddress :: Text -- ^ Not shown but stored
     } deriving Eq
 
--- | How to save and restore comments from persisten storage. All necesary
---   actions are accomplished through these 5 functions. Currently, only
---   @persistStorage@ is available.
+-- | How to save and restore comments from persistent storage. All
+--   necessary actions are accomplished through these 5 functions.
+--   Currently, only @persistStorage@ is available.
 data CommentStorage s m = CommentStorage
     { csGet    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
     , csStore  :: Comment -> GHandler s m ()
     , csUpdate :: Comment -> Comment -> GHandler s m ()
     , csDelete :: Comment -> GHandler s m ()
+
+    -- | Pass @Nothing@ to get all comments site-wide.
     , csLoad   :: Maybe ThreadId -> GHandler s m [Comment]
     }
 

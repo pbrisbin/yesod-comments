@@ -118,8 +118,8 @@ getThreadedComments = do
         latest' :: [Comment] -> UTCTime
         latest' = maximum . map cTimeStamp
 
--- | Halts with @permissionDenied@ or runs the action if the comment
---   belongs to the currently logged in user
+-- | If the comment belongs to the currently logged in user, runs the
+--   action on it. Otherwise, halts with @permissionDenied@.
 withUserComment :: YesodComments m => ThreadId -> CommentId -> (Comment -> GHandler s m RepHtml) -> GHandler s m RepHtml
 withUserComment thread cid f = do
     mcomment <- csGet commentStorage thread cid
@@ -136,8 +136,10 @@ withUserComment thread cid f = do
 runFormEdit :: YesodComments m => Comment -> ThreadId -> Maybe UserDetails -> GWidget CommentsAdmin m ()
 runFormEdit comment = runFormWith (Just comment) $ \cf -> do
     tm <- getRouteToMaster
+
     csUpdate commentStorage comment $ comment { cContent = formComment cf }
     setMessage "comment updated."
+
     redirect $ tm CommentsR
 
 layout :: Yesod m => Text -> GWidget s m () -> GHandler s m RepHtml
