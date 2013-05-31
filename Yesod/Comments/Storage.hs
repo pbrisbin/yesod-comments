@@ -27,9 +27,9 @@ import Yesod.Markdown (Markdown(..))
 
 import Data.Text (Text)
 import Data.Time (UTCTime)
-import Database.Persist.GenericSql (SqlPersist)
+import Database.Persist.Sql (SqlPersist)
 
-share [mkPersist sqlSettings, mkMigrate "migrateComments"] [persist|
+share [mkPersist sqlSettings, mkMigrate "migrateComments"] [persistUpperCase|
 SqlComment
     threadId  Text Eq noreference
     commentId Int    Eq Asc noreference

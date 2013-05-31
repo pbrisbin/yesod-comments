@@ -32,7 +32,7 @@ import Network.Gravatar hiding (gravatar)
 import qualified Network.Gravatar as G
 
 -- | Map the commenter's id to user details or return defaults.
-commentUserDetails :: YesodComments m => Comment -> GHandler s m UserDetails
+commentUserDetails :: YesodComments m => Comment -> HandlerT m IO UserDetails
 commentUserDetails c =
     return . fromMaybe (defaultUserDetails c) =<<
         case (cIsAuth c, fromPathPiece (cUserName c)) of
@@ -40,7 +40,7 @@ commentUserDetails c =
             _                -> return Nothing
 
 -- | Returns @Nothing@ if user is not authenticated
-currentUserDetails :: YesodComments m => GHandler s m (Maybe UserDetails)
+currentUserDetails :: YesodComments m => HandlerT m IO (Maybe UserDetails)
 currentUserDetails = do
     muid <- maybeAuthId
     case muid of
@@ -48,7 +48,7 @@ currentUserDetails = do
         _        -> return Nothing
 
 -- | Halts with @permissionDenied@ if user is not authenticated
-requireUserDetails :: YesodComments m => GHandler s m (UserDetails)
+requireUserDetails :: YesodComments m => HandlerT m IO (UserDetails)
 requireUserDetails = do
     mudetails <- currentUserDetails
     case mudetails of
@@ -64,7 +64,7 @@ defaultUserDetails c = UserDetails (cUserName c) (cUserName c) (cUserEmail c)
 gravatar :: Int -> Text -> String
 gravatar s = G.gravatar defaultConfig { gDefault = Just MM, gSize = Just $ Size s }
 
-isCommentingUser :: YesodComments m => Comment -> GHandler s m Bool
+isCommentingUser :: YesodComments m => Comment -> HandlerT m IO Bool
 isCommentingUser comment = do
     mudetails <- currentUserDetails
     cudetails <- commentUserDetails comment

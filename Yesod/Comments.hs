@@ -24,10 +24,10 @@ import Yesod.Comments.Utils
 import Yesod.Comments.Form
 import Yesod.Comments.View
 
-addComments :: (RenderMessage m FormMessage, YesodComments m) => ThreadId -> GWidget s m ()
+addComments :: (RenderMessage m FormMessage, YesodComments m) => ThreadId -> WidgetT m IO ()
 addComments thread = do
-    comments  <- lift $ csLoad commentStorage (Just thread)
-    mudetails <- lift $ currentUserDetails
+    comments  <- handlerToWidget $ csLoad commentStorage (Just thread)
+    mudetails <- handlerToWidget $ currentUserDetails
 
     [whamlet|
         <div .yesod_comments>

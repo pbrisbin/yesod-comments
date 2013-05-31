@@ -1,6 +1,8 @@
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE ConstraintKinds   #-}
+{-# LANGUAGE TypeFamilies      #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments.Core
@@ -60,23 +62,23 @@ data UserDetails = UserDetails
 --   necessary actions are accomplished through these 5 functions.
 --   Currently, only @persistStorage@ is available.
 data CommentStorage s m = CommentStorage
-    { csGet    :: ThreadId -> CommentId -> GHandler s m (Maybe Comment)
-    , csStore  :: Comment -> GHandler s m ()
-    , csUpdate :: Comment -> Comment -> GHandler s m ()
-    , csDelete :: Comment -> GHandler s m ()
+    { csGet    :: ThreadId -> CommentId -> HandlerT m IO (Maybe Comment)
+    , csStore  :: Comment -> HandlerT m IO ()
+    , csUpdate :: Comment -> Comment -> HandlerT m IO ()
+    , csDelete :: Comment -> HandlerT m IO ()
 
     -- | Pass @Nothing@ to get all comments site-wide.
-    , csLoad   :: Maybe ThreadId -> GHandler s m [Comment]
+    , csLoad   :: Maybe ThreadId -> HandlerT m IO [Comment]
     }
 
-class YesodAuth m => YesodComments m where
+class YesodAuthPersist m => YesodComments m where
     -- | How to store and load comments from persistent storage.
     commentStorage :: CommentStorage s m
 
     -- | If @Nothing@ is returned, the user cannot add a comment. This can
     --   be used to blacklist users. Note that comments left by them will
     --   still appear until manually deleted.
-    userDetails :: AuthId m -> GHandler s m (Maybe UserDetails)
+    userDetails :: AuthId m -> HandlerT m IO (Maybe UserDetails)
 
     -- | A thread's route. Currently, only used for linking back from the
     --   admin subsite.

@@ -31,7 +31,7 @@ import Network.Wai (remoteHost)
 
 import qualified Data.Text as T
 
-type Form s m x = Html -> MForm s m (FormResult x, GWidget s m ())
+type Form m x = Html -> MForm (HandlerT m IO) (FormResult x, WidgetT m IO ())
 
 data CommentForm = CommentForm
     { formUser    :: UserDetails
@@ -39,7 +39,7 @@ data CommentForm = CommentForm
     , formComment :: Markdown
     }
 
-commentFromForm :: YesodComments m => CommentForm -> GHandler s m Comment
+commentFromForm :: YesodComments m => CommentForm -> HandlerT m IO Comment
 commentFromForm cf = do
     now <- liftIO getCurrentTime
     ip  <- fmap (show . remoteHost) waiRequest
@@ -57,14 +57,14 @@ commentFromForm cf = do
         }
 
     where
-        getNextCommentId :: YesodComments m => ThreadId -> GHandler s m CommentId
+        getNextCommentId :: YesodComments m => ThreadId -> HandlerT m IO CommentId
         getNextCommentId tid = go =<< csLoad commentStorage (Just tid)
 
-        go :: YesodComments m => [Comment] -> GHandler s m CommentId
+        go :: YesodComments m => [Comment] -> HandlerT m IO CommentId
         go [] = return 1
         go cs = return $ maximum (map commentId cs) + 1
 
-commentForm :: RenderMessage m FormMessage => ThreadId -> UserDetails -> Maybe Comment -> Form s m CommentForm
+commentForm :: RenderMessage m FormMessage => ThreadId -> UserDetails -> Maybe Comment -> Form m CommentForm
 commentForm thread udetails mcomment = renderBootstrap $ CommentForm
     <$> pure udetails <*> pure thread
     <*> areq markdownField commentLabel (fmap cContent mcomment)
@@ -74,30 +74,28 @@ commentForm thread udetails mcomment = renderBootstrap $ CommentForm
         commentLabel = "Comment" { fsTooltip = Just "Comments are parsed as pandoc-style markdown." }
 
 -- | Run the form and stores the comment on successful submission
-runForm :: YesodComments m => ThreadId -> Maybe UserDetails -> GWidget s m ()
+runForm :: YesodComments m => ThreadId -> Maybe UserDetails -> WidgetT m IO ()
 runForm = runFormWith Nothing $ \cf -> do
-    tm <- getRouteToMaster
-
     csStore commentStorage =<< commentFromForm cf
     setMessage "comment added."
 
     -- redirect to current route
-    maybe notFound (redirect . tm) =<< getCurrentRoute
+    maybe notFound redirect =<< getCurrentRoute
 
 -- | Both handle form submission and present form HTML. On @FormSuccess@,
 --   run the given function on the submitted value.
 runFormWith :: YesodComments m
             => Maybe Comment
-            -> (CommentForm -> GHandler s m ())
+            -> (CommentForm -> HandlerT m IO ())
             -> ThreadId
             -> Maybe UserDetails
-            -> GWidget s m ()
+            -> WidgetT m IO ()
 runFormWith _ _ _ Nothing = [whamlet|<h4>Please ^{login} to post a comment.|]
 runFormWith mcomment f thread (Just ud@(UserDetails _ name email)) = do
-    ((res, form), enctype) <- lift $ runFormPost (commentForm thread ud mcomment)
+    ((res, form), enctype) <- handlerToWidget $ runFormPost (commentForm thread ud mcomment)
 
     case res of
-        FormSuccess cf -> lift $ f cf
+        FormSuccess cf -> handlerToWidget $ f cf
         _              -> return ()
 
     [whamlet|
@@ -118,9 +116,9 @@ runFormWith mcomment f thread (Just ud@(UserDetails _ name email)) = do
                     <button .btn .primary type="submit">Add comment
     |]
 
-login :: Yesod m => GWidget s m ()
+login :: Yesod m => WidgetT m IO ()
 login = do
-    mroute <- lift $ do
+    mroute <- handlerToWidget $ do
         setUltDestCurrent
         fmap authRoute getYesod
 

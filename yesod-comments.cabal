@@ -1,5 +1,5 @@
 name:                yesod-comments
-version:             0.8.3
+version:             0.9.0
 synopsis:            A generic comments interface for a Yesod application
 description:         A generic comments interface for a Yesod application
 homepage:            http://github.com/pbrisbin/yesod-comments
@@ -19,6 +19,7 @@ library
                  , Yesod.Comments.Utils
                  , Yesod.Comments.Form
                  , Yesod.Comments.View
+                 , Yesod.Comments.Management.Routes
                  , Yesod.Comments.Management
 
   -- Packages needed in order to build this package.
@@ -27,12 +28,12 @@ library
                , bytestring          >= 0.9.1  && < 0.11
                , friendly-time       >= 0.2   && < 0.3
                , gravatar            >= 0.5   && < 0.6
-               , persistent          >= 1.0   && < 1.2
+               , persistent          >= 1.2   && < 1.3
                , wai                 >= 1.3   && < 1.5
-               , yesod               >= 1.1   && < 1.2
-               , yesod-auth          >= 1.1   && < 1.2
-               , yesod-form          >= 1.1   && < 1.3
-               , yesod-markdown      >= 0.4   && < 0.8
+               , yesod               >= 1.2   && < 1.3
+               , yesod-auth          >= 1.2   && < 1.3
+               , yesod-form          >= 1.3   && < 1.4
+               , yesod-markdown      >= 0.8   && < 0.9
 
                , template-haskell
                , directory

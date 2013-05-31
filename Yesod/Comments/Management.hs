@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskell             #-}
 {-# LANGUAGE FlexibleInstances           #-}
 {-# LANGUAGE FlexibleContexts            #-}
+{-# LANGUAGE RankNTypes                  #-}
 {-# LANGUAGE TypeFamilies                #-}
 {-# LANGUAGE MultiParamTypeClasses       #-}
 {-# LANGUAGE OverloadedStrings           #-}
@@ -20,9 +21,8 @@
 --
 -------------------------------------------------------------------------------
 module Yesod.Comments.Management
-    ( CommentsAdmin
-    , getCommentsAdmin
-    , Route(..)
+    ( getCommentsAdmin
+    , module Yesod.Comments.Management.Routes
     ) where
 
 import Yesod
@@ -32,28 +32,24 @@ import Yesod.Comments.Core
 import Yesod.Comments.Utils
 import Yesod.Comments.Form
 import Yesod.Comments.View
+import Yesod.Comments.Management.Routes
 
 import Control.Monad (forM, unless)
 import Data.List (sortBy, nub)
 import Data.Text (Text)
 import Data.Time (UTCTime)
-import Language.Haskell.TH.Syntax hiding (lift)
-
-data CommentsAdmin = CommentsAdmin
 
 getCommentsAdmin :: a -> CommentsAdmin
 getCommentsAdmin = const CommentsAdmin
 
-mkYesodSub "CommentsAdmin"
-    [ ClassP ''YesodComments [ VarT $ mkName "master" ] ]
-    [parseRoutes|
-        /                            CommentsR      GET
-        /edit/#ThreadId/#CommentId   EditCommentR   GET POST
-        /delete/#ThreadId/#CommentId DeleteCommentR GET POST
-        |]
+instance YesodComments master => YesodSubDispatch CommentsAdmin (HandlerT master IO)
+    where yesodSubDispatch = $(mkYesodSubDispatch resourcesCommentsAdmin)
 
-getCommentsR :: YesodComments m => GHandler CommentsAdmin m RepHtml
-getCommentsR = do
+type Handler a = forall master. YesodComments master
+               => HandlerT CommentsAdmin (HandlerT master IO) a
+
+getCommentsR :: Handler RepHtml
+getCommentsR = lift $ do
     comments <- getThreadedComments
 
     layout "Your comments" [whamlet|
@@ -66,35 +62,72 @@ getCommentsR = do
                     ^{showComments cs}
         |]
 
-getEditCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getEditCommentR thread cid = withUserComment thread cid $ \c -> do
-    ud <- requireUserDetails
+getEditCommentR :: ThreadId -> CommentId -> Handler RepHtml
+getEditCommentR thread cid = do
+    ud@(UserDetails _ name email) <- lift $ requireUserDetails
 
-    layout "Edit comment" [whamlet|
-        ^{runFormEdit c thread (Just ud)}
-        |]
+    -- TODO: Duplication with withUserComment
+    comment <- lift $ do
+        mcomment <- csGet commentStorage thread cid
+        case mcomment of
+            Just comment -> do
+                _    <- requireAuthId
+                mine <- isCommentingUser comment
+                unless mine $ permissionDenied "you can only manage your own comments"
+                return comment
 
-postEditCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
+            Nothing -> notFound
+
+    ((res, form), enctype) <- lift $ runFormPost (commentForm thread ud (Just comment))
+
+    case res of
+        FormSuccess cf -> do
+            lift $ csUpdate commentStorage comment $ comment { cContent = formComment cf }
+            setMessage "comment updated."
+            redirect CommentsR
+        _ -> return ()
+
+    -- TODO: Duplication with runFormWith
+    lift $ layout "Edit comment" [whamlet|
+        <div .avatar>
+            <a target="_blank" title="change your profile picture at gravatar" href="http://gravatar.com/emails/">
+                <img src="#{gravatar 48 email}">
+
+        <div .input>
+            <form enctype="#{enctype}" method="post" .form-stacked>
+                <div .clearfix .optional>
+                    <label for="username">Username
+                    <div .input>
+                        <p #username>#{name}
+
+                ^{form}
+
+                <div .actions>
+                    <button .btn .primary type="submit">Add comment
+    |]
+
+postEditCommentR :: ThreadId -> CommentId -> Handler RepHtml
 postEditCommentR = getEditCommentR
 
-getDeleteCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-getDeleteCommentR _ _ = layout "Delete comment" [whamlet|
+getDeleteCommentR :: ThreadId -> CommentId -> Handler RepHtml
+getDeleteCommentR _ _ = lift $ layout "Delete comment" [whamlet|
     <p>Are you sure?
     <form method="post" .form-stacked>
         <div .actions>
             <button .btn .btn-danger type="submit">Delete comment
     |]
 
-postDeleteCommentR :: YesodComments m => ThreadId -> CommentId -> GHandler CommentsAdmin m RepHtml
-postDeleteCommentR thread cid = withUserComment thread cid $ \c -> do
-    tm <- getRouteToMaster
-    csDelete commentStorage c
-    setMessage "comment deleted."
-    redirect $ tm CommentsR
+postDeleteCommentR :: ThreadId -> CommentId -> Handler RepHtml
+postDeleteCommentR thread cid = do
+    lift $ withUserComment thread cid $ \c -> do
+        csDelete commentStorage c
+        setMessage "comment deleted."
+
+    redirect CommentsR
 
 -- | Return tuples of thread id and associated comments sorted by most
 --   recently commented on thread.
-getThreadedComments :: YesodComments m => GHandler s m [(ThreadId, [Comment])]
+getThreadedComments :: YesodComments m => HandlerT m IO [(ThreadId, [Comment])]
 getThreadedComments = do
     allComments <- csLoad commentStorage Nothing
     allThreads  <- forM allComments $ \comment -> do
@@ -109,7 +142,7 @@ getThreadedComments = do
     where
         latest :: (ThreadId, [Comment]) -> (ThreadId, [Comment]) -> Ordering
         latest (t1, cs1) (t2, cs2) =
-            -- reversed comparason so more recent threads sort first
+            -- reversed comparison so more recent threads sort first
             case compare (latest' cs1) (latest' cs2) of
                 EQ -> compare t1 t2
                 GT -> LT
@@ -120,7 +153,7 @@ getThreadedComments = do
 
 -- | If the comment belongs to the currently logged in user, runs the
 --   action on it. Otherwise, halts with @permissionDenied@.
-withUserComment :: YesodComments m => ThreadId -> CommentId -> (Comment -> GHandler s m RepHtml) -> GHandler s m RepHtml
+withUserComment :: YesodComments m => ThreadId -> CommentId -> (Comment -> HandlerT m IO a) -> HandlerT m IO a
 withUserComment thread cid f = do
     mcomment <- csGet commentStorage thread cid
     case mcomment of
@@ -132,17 +165,7 @@ withUserComment thread cid f = do
 
         Nothing -> notFound
 
--- | Runs the form and updates the comment on success
-runFormEdit :: YesodComments m => Comment -> ThreadId -> Maybe UserDetails -> GWidget CommentsAdmin m ()
-runFormEdit comment = runFormWith (Just comment) $ \cf -> do
-    tm <- getRouteToMaster
-
-    csUpdate commentStorage comment $ comment { cContent = formComment cf }
-    setMessage "comment updated."
-
-    redirect $ tm CommentsR
-
-layout :: Yesod m => Text -> GWidget s m () -> GHandler s m RepHtml
+layout :: Yesod m => Text -> WidgetT m IO () -> HandlerT m IO RepHtml
 layout title inner = defaultLayout $ do
     setTitle $ toHtml title
 

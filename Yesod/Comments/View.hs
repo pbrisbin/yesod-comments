@@ -25,7 +25,7 @@ import Yesod.Markdown
 import Data.Time.Format.Human
 import Data.Monoid (mempty)
 
-showComments :: YesodComments m => [Comment] -> GWidget s m ()
+showComments :: YesodComments m => [Comment] -> WidgetT m IO ()
 showComments comments = [whamlet|
     <div .list>
         $if not $ null comments
@@ -42,11 +42,11 @@ showComments comments = [whamlet|
         helper 1 = "1 comment"
         helper n = show n ++ " comments"
 
-showComment :: YesodComments m => Comment -> GWidget s m ()
+showComment :: YesodComments m => Comment -> WidgetT m IO ()
 showComment comment = do
-    mine                     <- lift $ isCommentingUser comment
-    commentTimestamp         <- lift . liftIO . humanReadableTime $ cTimeStamp comment
-    UserDetails _ name email <- lift $ commentUserDetails comment
+    mine                     <- handlerToWidget $ isCommentingUser comment
+    commentTimestamp         <- handlerToWidget . liftIO . humanReadableTime $ cTimeStamp comment
+    UserDetails _ name email <- handlerToWidget $ commentUserDetails comment
 
     let anchor = "comment_" ++ show (commentId comment)
 
@@ -72,7 +72,7 @@ showComment comment = do
 -- | Edit and Delete links if configured
 commentControls :: Maybe (ThreadId -> CommentId -> Route m) -- ^ Edit route
                 -> Maybe (ThreadId -> CommentId -> Route m) -- ^ Delete route
-                -> ThreadId -> CommentId -> GWidget s m ()
+                -> ThreadId -> CommentId -> WidgetT m IO ()
 commentControls e@(Just _) d@(Just _) thread cid = [whamlet|
     ^{commentControls e Nothing thread cid}
     \ | 
