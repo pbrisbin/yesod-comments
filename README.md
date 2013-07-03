@@ -45,6 +45,10 @@ comments and a form for submitting new ones.
 must be an instance of `YesodAuth` in order to use `YesodComments`.
 
 ~~~ { .haskell }
+-- addComments handles displaying the form on GET and processing it on 
+-- POST, this follows the common Yesod idiom of handling both methods 
+-- with one handler:
+
 getPostR :: String -> Handler RepHtml
 getPostR slug = do
     post <- getPostBySlug slug
@@ -59,6 +63,9 @@ getPostR slug = do
             <div .comments>
                 #{addComments slug}
         |]
+
+postPostR :: String -> Handler RepHtml
+postPostR = getPostR
 ~~~
 
 Finally, add a `migrateComments` call to your Application runner.
