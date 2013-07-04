@@ -20,6 +20,9 @@
 module Yesod.Comments.Storage
     ( persistStorage
     , migrateComments
+    , SqlComment 
+    , SqlCommentGeneric (..)
+    , EntityField (..)
     ) where
 
 import Yesod
