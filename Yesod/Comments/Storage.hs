@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 -------------------------------------------------------------------------------
 -- |
 -- Module      :  Yesod.Comments.Storage
